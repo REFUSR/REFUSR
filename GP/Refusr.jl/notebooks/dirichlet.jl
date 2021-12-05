@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.17.0
+# v0.17.2
 
 using Markdown
 using InteractiveUtils
@@ -7,11 +7,10 @@ using InteractiveUtils
 # ╔═╡ d31dfd8f-2442-46cc-b788-3751a4f74308
 begin
 	using Pkg
-	REFUSR_URL="https://github.com/oblivia-simplex/refusr"
-	COCKATRICE_URL="https://github.com/oblivia-simplex/Cockatrice.jl"
-	Pkg.activate(mktempdir())
-	#Pkg.add(url=COCKATRICE_URL) ; using Cockatrice
-	Pkg.add(url=REFUSR_URL); using Refusr: Sensitivity, FF, LinearGenotypes, Expressions, Cockatrice
+	DIR="$(ENV["HOME"])/src/REFUSR/GP/Refusr.jl"
+	Pkg.activate(DIR)
+	include("$(DIR)/src/base.jl")
+	using Cockatrice
 	Pkg.add("Distributions"); 	using Distributions
 	Pkg.add("FunctionWrappers"); using FunctionWrappers: FunctionWrapper
 	Pkg.add("Statistics");	using Statistics
@@ -166,10 +165,10 @@ function plot_distributions(D)
 end
 
 # ╔═╡ f4bc4bef-a589-4297-a461-faeb8683914e
-plot_distributions(distributions(3))
+#plot_distributions(distributions(3))
 
 # ╔═╡ 28bf94c9-12d3-497b-917b-cfcece527e33
-plot_distributions(distributions(4))
+#plot_distributions(distributions(4))
 
 # ╔═╡ 708edd80-42ea-4033-b900-c27e7ba74eee
 #plot_distributions(distributions(5))
@@ -184,24 +183,19 @@ plot_distributions(distributions(4))
 #plot_distributions(distributions(10))
 
 # ╔═╡ f7e39a3b-14ba-4682-b386-a4b08525a955
-D2 = distributions(2)
+#D2 = distributions(2)
 
 # ╔═╡ 9f651db0-3611-437a-a852-f3ba0c385c79
-rows = collect(eachrow(D2))
+#rows = collect(eachrow(D2))
 
 # ╔═╡ 6f9e3071-8488-438b-b7fe-c779d767f780
-u2 = unique(D2.vector)
+#u2 = unique(D2.vector)
 
 # ╔═╡ b085a2e6-1193-4d3c-856d-da44ab6d9af2
-u3 = (unique(sample_generator(GENERATORS.vector, 3, 100000))) |> sort
+#u3 = (unique(sample_generator(GENERATORS.vector, 3, 100000))) |> sort
 
 # ╔═╡ 0a8e8ef5-7558-4180-ab76-319d8db8f4a6
 
-
-# ╔═╡ 137353ab-751e-4109-b301-87ac28ecff47
-let dim = 3
-	vectors = colorant"red" .* [Expressions.bits(I, 2^dim) for I in 0:2^(2^dim)-1]
-end
 
 # ╔═╡ 7750a86b-e502-4a45-9677-b000ef88fc94
 numfuncs(dim) = 2^(2^dim)
@@ -232,10 +226,10 @@ Plots.histogram(range(0//12, 12//12, step=1//12),
 	bins=range(0, stop=1.000001, length=12))
 
 # ╔═╡ ac1d8933-6e9d-441c-9a96-80397190431c
-plot_distribution(energies_on_3cube, "energies on cube")
+#plot_distribution(energies_on_3cube, "energies on cube")
 
 # ╔═╡ 3bb91cde-9c56-4e53-afae-8bbc20dff83e
-D3 = distributions(3)
+#D3 = distributions(3)
 
 # ╔═╡ e6e51786-5d29-4177-bc15-f40b9e9d5409
 md"might be nice to have the sensitivity analysis yield a rational number response, which could then be converted to float. TODO"
@@ -433,7 +427,6 @@ evolve(10000)
 # ╠═b085a2e6-1193-4d3c-856d-da44ab6d9af2
 # ╠═0a8e8ef5-7558-4180-ab76-319d8db8f4a6
 # ╠═42e1aad9-6330-40e9-9aea-f7558edf4f1d
-# ╠═137353ab-751e-4109-b301-87ac28ecff47
 # ╠═7750a86b-e502-4a45-9677-b000ef88fc94
 # ╠═a20e6356-afe2-4380-a076-2404b06f40b4
 # ╠═0f09f58d-aff7-400a-ae78-5308b878e48a

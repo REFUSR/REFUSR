@@ -101,24 +101,24 @@ That way, the pin state changes could be shown in real-time without risking losi
 
 # Using Dirichlet Energy as a Gradient in the Search for Recalcitrant Functions
 
-Macready and Wolpert's well-known "No Free Lunch" theorem [[@Wolpert1997NoFreeLunch]] informs us -- counterintuitively, perhaps -- that not only is there no optimization or search algorithm that performs better than random search across all problem domains, but *that the average performance of **any** given search algorithm across all domains is equal*. Whatever better-than-random performance a particular algorithm finds in one domain is paid for in its performance in some other.
+Macready and Wolpert's well-known "No Free Lunch" theorem [@Wolpert1997NoFreeLunch] informs us -- counterintuitively, perhaps -- that not only is there no optimization or search algorithm that performs better than random search across all problem domains, but *that the average performance of **any** given search algorithm across all domains is equal*. Whatever better-than-random performance a particular algorithm finds in one domain is paid for in its performance in some other.
 
 <!-- break it down to (1) the target of the search and (2) the choice of gradient. motivate the quest for additional gradients. -->
 
 
 ## The Difficulty with Parity Functions
 
-In our [[milestone_3|Milestone 3 report]], we showed that REFUSR is capable of reliably discovering programs that implement moderately complex Boolean functions, such as the randomized 4-to-1 Multiplexor, a function on the 6-dimensional Boolean hypercube, the randomized 8-to-1 Multiplexor, which lives on the 11-dimensional hypercube, and an assortment of randomly generated functions of similar size.
+In our [Milestone 3 report](milestone_3.md), we showed that REFUSR is capable of reliably discovering programs that implement moderately complex Boolean functions, such as the randomized 4-to-1 Multiplexor, a function on the 6-dimensional Boolean hypercube, the randomized 8-to-1 Multiplexor, which lives on the 11-dimensional hypercube, and an assortment of randomly generated functions of similar size.
 
 The situation that confronted us when we turned to the 6-bit parity problem looked quite different. If we left the system running for long enough, eventually an answer would sometimes be found, but an examination of the logs made this appear to be little more than dumb luck. None of the phenotypic traits we'd designed seemed to have discovered any reliable gradient in the fitness landscape, until the very end. As trivial as the solution to the problem might be for a human programmer to solve -- odd-parity is, after all, just an $n$-ary XOR, and even-parity its negation -- for our existing GP system, it was a needle in a haystack. The situation was even worse when we attempted to solve 11-bit parity, which brought the system to a standstill, each of our fitness metrics flatlined. What few successes we had depended on the cheap trick of reducing the system's primitive operations to just `XOR` and `MOV`, and even then it could take upwards of 26,000 tournaments to find a solution.
 
-<!-- provide some details, throw up some plots -->
+<!-- NEED PLOTS provide some details, throw up some plots -->
 <!-- TODO: spin up another Pluto notebook to generate these plots? or just load them into the dashboard and use that. probably the latter. -->
 
-This probably shouldn't have been such a surprise. The genetic programming literature is scattered with references to *parity* being a particularly difficult problem to solve. The classic point of reference, on this score, is John Koza's 1992 tome, [[@Koza1992GeneticProgrammingProgramming]]. Koza recognized parity as a particularly difficult function to discover through evolutionary synthesis. Even in as few as four dimensions, the task proved arduous. 
+This shouldn't have come as a great surprise. The genetic programming literature is scattered with references to *parity* being a particularly difficult problem to solve. The classic point of reference, on this score, is John Koza's 1992 tome, [@Koza1992GeneticProgrammingProgramming]. Koza recognized parity as a particularly difficult function to discover through evolutionary synthesis. Even in as few as four dimensions, the task proved arduous. 
 
-![[Pasted image 20211028234255.png]]
-![[Pasted image 20211028234055.png]]
+![](Pasted%20image%2020211028234255.png)
+![](Pasted%20image%2020211028234055.png)
 
 Without the support for modularity afforded by *automatically defined functions* (ADFs), genetic search for parity functions of higher dimensionality remained intractable. (With ADFs, he was able to reach 11-bit parity functions.)
 
@@ -166,7 +166,7 @@ The notion of measuring Boolean functions' "sensitivity", in the sense we're goi
 
 This notion went on to spawn a cottage industry of theoretical computer science publications, predominantly concerned with whether or not a polynomial relation could be established between this measure of sensitivity and others, such as "certificate sensitivity" and "block sensitivity". These don't concern us here.
 
-There are a few points where we might try to refine Nisan's definition, somewhat, or at least mould it into a shape that could be of more use to us. Instead of thinking of "input strings", let's place ourselves again in the hypercube, and consider each $w$ as a vertex. The other input strings $\left\{w^i | 0 <= i < length(w)\right}$, each reachable from $w$ by flipping a single bit, are the *neighbours* of vertex $w$ in the hypercube (where edges represent bit-flips). Now instead of taking the *count* of neighbours $w^i$ of $w$ such that $f(w^i) \neq f(w)$, let's consider the sum of squared differences $\Sigma (f(w^i) - f(w))^2$. In a Boolean context, of course, these measures are so far equivalent. If $f(w^i)$ differs from $f(w)$ it can only be by an absolute value of 1, and so this sum is never equal to anything other than the count. The reason for rewriting things this way, in the end, is just to bring out the resemblance of Nisanian "sensitivity" to another more general property.
+There are a few points where we might try to refine Nisan's definition, somewhat, or at least mould it into a shape that could be of more use to us. Instead of thinking of "input strings", let's place ourselves again in the hypercube, and consider each $w$ as a vertex. The other input strings $\left\{w^i ~|~ 0 <= i < \text{length}(w)\right\}$, each reachable from $w$ by flipping a single bit, are the *neighbours* of vertex $w$ in the hypercube (where edges represent bit-flips). Now instead of taking the *count* of neighbours $w^i$ of $w$ such that $f(w^i) \neq f(w)$, let's consider the sum of squared differences $\Sigma (f(w^i) - f(w))^2$. In a Boolean context, of course, these measures are so far equivalent. If $f(w^i)$ differs from $f(w)$ it can only be by an absolute value of 1, and so this sum is never equal to anything other than the count. The reason for rewriting things this way, in the end, is just to bring out the resemblance of Nisanian "sensitivity" to another more general property.
 
 Anyone coming to Nisan's notion fo sensitivity in hopes of finding a property that might allow them to classify and distinguish between various Boolean functions might be disappointed to see how much information it simply throws away. It wantonly disposes of the fine-grained (and implicitly graph-theoretic) information that it gathers together under the rubric of "local sensitivity", only to take the *maximum* local sensitivity over the set of possible input strings (i.e., the vertices of the hypercube).
 
@@ -217,24 +217,33 @@ end
 
 ## Dirichlet Energy Proximity as a Fitness Pressure
 
-## Returning to the 11-bit Parity Problem
-
-See [this experiment](http://0.0.0.0:9124///2021/10/26/Parity-11-xor.16-03-57) for details.
-
-### Trial 1
-
-![[parity-11-plot-trial-1.png]]
+We returned to the parity problems with a composite fitness function in which the distance between the Dirichlet energy of the candidate function and that of the target figured as a heavily-weighted component -- the other components being the features that served us well in the multiplexor experiments: 
+1. the Hamming distance between the candidate program's output and the output of the target function, modified by a fitness sharing algorithm that makes the reward for each test case inversely proportionate to the frequency with which solutions for that case appear in the population 
+2. the maximum *mutual information* obtaining between a candidate program's intermediate execution states and the target function's output vector
+3. a simple parsimony score, which assigns an award inversely proportionate to the candidate program's length, intended to mitigate bloat
 
 
 
-### Trial 2
+| Feature                    | Weight |
+| -------------------------- | ------ |
+| Dirichlet energy proximity | 0.65   |
+| Shared Hamming distance    | 0.19   |
+| Trace information          | 0.13   |
+| Parsimony                  | 0.03   |
 
-![[parity-11-plot.png]]
+### Returning to the 11-bit Parity Problem
+
+The 11-bit parity problem yielded readily to populations for which Dirichlet energy proximity to the target factored as a significant selective pressure, as can be seen in figures {@fig:parity11-trial1} and {@fig:parity11-trial2}.
+
+![](parity-11-plot-trial-1.png){#fig:parity11-trial1}
 
 
-#### Effective Code
+![](parity-11-plot.png){#fig:parity11-trial2}
 
-22 Instructions (50.0%)
+
+#### Specimen RTL Code
+
+The effective code for the champion of the second trial of the 11-bit parity experiment is shown below. The `xor` opcode features prominently here, which is unsurprising given that `xor` is nothing other than the 2-bit form of the odd parity function.
 
 ```
 001.    R[04] ← R[04] xor D[05]
@@ -264,19 +273,22 @@ See [this experiment](http://0.0.0.0:9124///2021/10/26/Parity-11-xor.16-03-57) f
 
 ## 12-bit Parity
 
-![12 bit parity](./img/parity-12-plot.png)
+Increasing the dimension to 12 posed no serious challenge for the system, which has shown itself capable of consistently finding solutions in fewer than 10,000 tournaments (since the tournament size has been set to 6 in these experiments, that amounts to fewer than 60,000 individual evaluations).
 
-![[parity-12-plot.png]]
+![](./img/parity-12-plot.png)
+
 
 ## 13-bit Parity
 
-Even if we increase the dimension yet again, and move from a search space of $2^{2^12}$ functions (instantiated over an even greater number of programs) to one of $2^{2^13}$ functions, the Dirichlet energy gradient reliably guides us towards the parity function.  
+Even if we increase the dimension yet again, and move from a search space of $2^{2^12}$ functions (instantiated over an even greater number of programs) to one of $2^{2^13}$ functions, the Dirichlet energy gradient reliably guides us towards the parity function.
 
-![[parity-13-plot.png]]
+It may come as some surprise that the number of tournaments required to solve the 13-dimensional case scarcely appeared to exceed the number required to solve 12-dimensional parity. In our first stab at the 13-bit case, in fact, approximately 2000 *fewer* tournaments were needed than were needed in the 12-bit case. It would be even more surprising if this result surived a statistically significant number of trials, though it is *plausible* that a reduction in the necessary number of tournaments could result from the doubling of the size of the training set that occurs when we increase the dimension of the function.
 
-The solution in this case came from the island whose interaction matrix is presented in the lower left quadrant of figure <!-- TODO label figures -->. 
+![](parity-13-plot.png)
 
-![[parity-13-im.png]]
+The solution in this particular trial came from the island whose interaction matrix is presented in the lower left quadrant of figure {@fig:parity13im}. This is, among other things, a striking example of the difference in the fitness landscapes furnished by Dirichlet energy measurements on the one hand, and the Hamming distance metric most often used in Boolean symbolic regression.
+
+![Interaction matrices for the four subpopulations.](parity-13-im.png){#fig:parity13im}
 
 
 
@@ -295,7 +307,7 @@ But what does the distribution of Dirichlet energy over the general space of $n$
 
 In low-dimensional spaces, like the 3-cube, we can answer this question through the admittedly lazy method of brute force. The histogram shown in {@fig:energy-histogram-3cube} illustrates what appears to be a *binomial distribution* of Dirichlet energy over the 256 Boolean functions on the 3-dimensional cube.
 
-![[energies_on_3cube_histogram.png]]{#fig:energy-histogram-3cube}
+![energies_on_3cube_histogram.png](energies_on_3cube_histogram.png){#fig:energy-histogram-3cube}
 
 We are rarely dealing with the *totality* of functions on the $n$-cube, however, especially when $n$ is even moderately large. There are, for example, exactly 1090748135619415929462984244733782862448264161996232692431832786189721331849119295216264234525201987223957291796157025273109870820177184063610979765077554799078906298842192989538609825228048205159696851613591638196771886542609324560121290553901886301017900252535799917200010079600026535836800905297805880952350501630195475653911005312364560014847426035293551245843928918752768696279344088055617515694349945406677825140814900616105920256438504578013326493565836047242407382442812245131517757519164899226365743722432277368075027627883045206501792761700945699168497257879683851737049996900961120515655050115561271491492515342105748966629547032786321505730828430221664970324396138635251626409516168005427623435996308921691446181187406395310665404885739434832877428167407495370993511868756359970390117021823616749458620969857006263612082706715408157066575137281027022310927564910276759160520878304632411049364568754920967322982459184763427383790272448438018526977764941072715611580434690827459339991961414242741410599117426060556483763756314527611362658628383368621157993638020878537675545336789915694234433955666315070087213535470255670312004130725495834508357439653828936077080978550578912967907352780054935621561090795845172954115972927479877527738560008204118558930004777748727761853813510493840581861598652211605960308356405941821189714037868726219481498727603653616298856174822413033485438785324024751419417183012281078209729303537372804574372095228703622776363945290869806258422355148507571039619387449629866808188769662815778153079393179093143648340761738581819563002994422790754955061288818308430079648693232179158765918035565216157115402992120276155607873107937477466841528362987708699450152031231862594203085693838944657061346236704234026821102958954951197087076546186622796294536451620756509351018906023773821539532776208676978589731966330308893304665169436185078350641568336944530051437491311298834367265238595404904273455928723949525227184617404367854754610474377019768025576605881038077270707717942221977090385438585844095492116099852538903974655703943973086090930596963360767529964938414598185705963754561497355827813623833288906309004288017321424808663962671333528009232758350873059614118723781422101460198615747386855096896089189180441339558524822867541113212638793675567650340362970031930023397828465318547238244232028015189689660418822976000815437610652254270163595650875433851147123214227266605403581781469090806576468950587661997186505665475715792896 Boolean functions on the 13-cube. And the set of programs that instantiate these functions, and which can be constructed with the program constructors at our disposal, will tend to be even larger, depending on various parameters (the number of operations and registers available, the maximum length of programs, and so on).
 
@@ -308,21 +320,24 @@ We can consider, for example, three distinct ways of generating a "random functi
 3. finally, we could employ the algorithms that we're already using in Cockatrice to generate random vectors of register-transfer language (or "virtual assembly") instructions, and then execute the instruction vector or "program" in the virtual machine that Cockatrice uses to evaluate candidate programs (i.e., to establish the genotype-phenotype map). Whatever value is contained by the return register, `R1`, is then returned by `f`.
 
 
+The distribution of Dirichlet energy over sets of functions produced by each of these random generators (yielding 1000 samples each, with replacement) can be seen in figures {@fig:randomfunc3} through {@fig:randomfunc10}. What we find there is a pattern that appears to be fairly robust with respect to variations in program length (for the function generators of type 3) and expression depth (for function generators of type 2), as well as variations in the choice of primitive operations. In each case, the distribution of energy approximates a normal distribution with variance proportionate to dimension. The two non-uniform varieties of random function generator are biased in the direction of low-energy functions. This bias is far more pronounced in the case of the RTL function generator than its AST counterpart.
+
+This is significant insofar as the REFUSR GP engine, itself, represents functions through RTL instruction sequences. It is not difficult, however, to evolve a random population of programs towards higher energy distributions. If, for example, we initialize a population of random programs using the RTL program generator, and then let the fitness function simply be the Dirichlet energy measure of each candidate program -- thereby rewarding the maximization of Dirichlet energy -- then we can swiftly steer the distribution towards a more or less *normal* state, and, if we persevere, towards a state that is *highly* biased towards high energy functions. <!-- TODO I need the plots for this. reopen the pluto notebook if needed. -->
 
 
-![[energy_distributions_in_3_dimensions.png]]
+![Dirichlet energy distributions of randomly generated functions in 3 dimensions](energy_distributions_in_3_dimensions.png){#fig:randomfunc3}
 
-![[energy_distributions_in_4_dimensions.png]]
+![Dirichlet energy distributions of randomly generated functions in 4 dimensions](energy_distributions_in_4_dimensions.png){#fig:randomfunc4}
 
-![[energy_distributions_in_5_dimensions.png]]
-
-
-![[energy_distributions_in_6_dimensions.png]]
-
-![[energy_distributions_in_8_dimensions.png]]
+![Dirichlet energy distributions of randomly generated functions in 5 dimensions](energy_distributions_in_5_dimensions.png){#fig:randomfunc5}
 
 
-![[energy_distributions_in_10_dimensions.png]]
+![Dirichlet energy distributions of randomly generated functions in 6 dimensions](energy_distributions_in_6_dimensions.png){#fig:randomfunc6}
+
+![Dirichlet energy distributions of randomly generated functions in 8 dimensions](energy_distributions_in_8_dimensions.png){#fig:randomfunc8}
+
+
+![Dirichlet energy distributions of randomly generated functions in 10 dimensions](energy_distributions_in_10_dimensions.png){#fig:randomfunc10}
 
 
 # Probabilistic Property Testing: Beyond the Junta Property and into Signature Space
