@@ -7,7 +7,9 @@ date: \today
 
 # Introduction
 
-Since the submission of our third milestone report, we've been working towards the integration of the three principal modules of the REFUSR project: the hardware interface or "Refuduino PLC Whisperer", the "Cockatrice" genetic programming engine, and the probabilistic property testing module.
+Since the submission of our third milestone report, we've been working towards the integration of the three principal modules of the REFUSR project: the hardware interface or "Refuduino PLC Whisperer", the "Cockatrice" genetic programming (GP) engine, and the probabilistic property testing (PPT) module.
+
+We have set up the hardware interface in such a way as to allow the PLC to be queried as an oracle by the GP and PPT modules, respectively. The PPT module will provide possible constraints (in the form of property assertions), sampling policies, and a new type of distance metric to the GP module. The GP module will integrate the information provided by the two others, and use it to drive a genetic search for an expression that adequately specifies the behaviour of the PLC, as observed through the eyes of the Whisperer.
 
 
 
@@ -39,7 +41,7 @@ We continue to be interested in collaboration and/or feedback from other REFUSR 
 ![ATMEGA2560 MCU "catamaran"](img/catamaran.jpeg){#fig:catamaran}
 
 
-# Development of pin-level monitoring tools with Frida
+## Development of pin-level monitoring tools with Frida
 
 The [OpenPLC](httsp://www.openplcproject.com) platform has proven to be a useful platform on which to base our initial round of PLC development. It's Open Source and has proven easy to setup and run our ST code on. It is still very much in development and has minimal logging and debugging facilities however.
 
@@ -98,19 +100,31 @@ The tool hooks the digitalRead/digitalWrite functions, just like `openplc-read-a
 One of the plans with these tools, is to refine the UI for at least the `openplc-read-all-pins.py` to some type of Terminal UI (TUI) that updates itself, instead of just outputting row after row in the terminal.
 That way, the pin state changes could be shown in real-time without risking losing data because it scrolls past in the terminal too quick.
 
+## Remote PLC Access
 
-# Using Dirichlet Energy as a Gradient in the Search for Recalcitrant Functions
+In order to enable remote access to the target PLC device, we have moved the Refuduino over to a Teensyboard 4.1 MCU. This is a 32-bit ARM M7 processor with 1024K RAM, 8MB in Flash memory and 55 GPIO pins as well as an onboard TI DP83825 which provides a 100Mbit Ethernet interface. This has allowed us to import the Arduino MODBUS TCP library into the Refuduino code and provide LAN/WAN access to the Refuduino MCU as well at the current TTL-serial output. In previous versions of the Refuduino code, the seed bits for the Symbolic Expression run on the OpenPLC server were randomly generated from an PRN that ran in the main Refuduino loop() code. The MCU remains attached to the OpenPLC server via its GPIO cable. Effectively, this places two MODBUS Servers on either side of the GPIOs, neither aware of the other. A TCP port-scan from either the Pi running OpenPLC or another client on the same network would certainly turn up multiple MODBUS servers, but in a production industrial environment this might escape notice. We have been able to successfully replicate the "Numbers station" functionality on the MCU as a Python script on a remote host, have it inject those values into the MCU via PyModBus and have them be recognized by the OpenPLC dashboard. 
+
+As MODBUS has program-defined registers that pin states can be stored into or written from, we now have a way to store-and-forward GPIO states between the Refuduino and external agents.  
+
+This takes the MCU from a place of acting as a simple target device for the OpenPLC server into one where it can fully interact with other inspection, logging and analysis tools commonly used in other areas of InfoSec. We are interested in possible further development of this tool with others either inside or outside the ReMath effort who might find it useful. The idea of a sort of "PLC Pineapple" or "PLC Pirate" widget is certainly appealing.
+
+This additional network functionality, moreover, will allow our genetic symbolic regression and probabilistic property testing modules to *remotely* interact with the PLC. Architecturally, this affords us the possibility of running these computationally expensive processes in a distributed fashion, while providing continual access to the PLC over the network. Our Modbus-mediated API will allow these client programs to send input arguments to the PLC and retrieve the resulting output, an interaction that can be readily wrapped in a function interface, which will serve as the "oracle" for the property tester and the source of training data for the genetic programming engine.
+
+
+# The Use of Dirichlet Energy Distance as a Selective Pressure
 
 Macready and Wolpert's well-known "No Free Lunch" theorem [@Wolpert1997NoFreeLunch] informs us -- counterintuitively, perhaps -- that not only is there no optimization or search algorithm that performs better than random search across all problem domains, but *that the average performance of **any** given search algorithm across all domains is equal*. Whatever better-than-random performance a particular algorithm finds in one domain is paid for in its performance in some other.
 
-<!-- break it down to (1) the target of the search and (2) the choice of gradient. motivate the quest for additional gradients. -->
-
-
-## The Difficulty with Parity Functions
-
 In our [Milestone 3 report](milestone_3.md), we showed that REFUSR is capable of reliably discovering programs that implement moderately complex Boolean functions, such as the randomized 4-to-1 Multiplexor, a function on the 6-dimensional Boolean hypercube, the randomized 8-to-1 Multiplexor, which lives on the 11-dimensional hypercube, and an assortment of randomly generated functions of similar size.
 
-The situation that confronted us when we turned to the 6-bit parity problem looked quite different. If we left the system running for long enough, eventually an answer would sometimes be found, but an examination of the logs made this appear to be little more than dumb luck. None of the phenotypic traits we'd designed seemed to have discovered any reliable gradient in the fitness landscape, until the very end. As trivial as the solution to the problem might be for a human programmer to solve -- odd-parity is, after all, just an $n$-ary XOR, and even-parity its negation -- for our existing GP system, it was a needle in a haystack. The situation was even worse when we attempted to solve 11-bit parity, which brought the system to a standstill, each of our fitness metrics flatlined. What few successes we had depended on the cheap trick of reducing the system's primitive operations to just `XOR` and `MOV`, and even then it could take upwards of 26,000 tournaments to find a solution.
+The fitness function used in those experiments was a weighted sum of three different measures:
+
+1. the Hamming distance between the candidate program's output and the output of the target function, modified by a fitness sharing algorithm that makes the reward for each test case inversely proportionate to the frequency with which solutions for that case appear in the population 
+2. the maximum *mutual information* obtaining between a candidate program's intermediate execution states and the target function's output vector
+3. a simple parsimony score, which assigns an award inversely proportionate to the candidate program's length, intended to mitigate bloat
+
+
+The situation that confronted us when we turned to the 6-bit parity problem looked quite different. If we left the system running for long enough, eventually an answer would sometimes be found, but an examination of the logs made this appear to be little more than dumb luck. None of the phenotypic traits we'd designed seemed to have discovered any reliable gradient in the fitness landscape, until the very end. As trivial as the solution to the problem might be for a human programmer to solve -- odd-parity is, after all, just an $n$-ary XOR, and even-parity its negation -- for our existing GP system, it was a needle in a haystack. The situation was even worse when we attempted to solve 11-bit parity, which brought the system to a standstill, each of our fitness metrics flatlined. What few successes we had depended on the cheap trick of reducing the system's primitive operations to just `XOR` and `MOV`, and even then it could take upwards of **26,000 tournaments** to find a solution.
 
 <!-- NEED PLOTS provide some details, throw up some plots -->
 <!-- TODO: spin up another Pluto notebook to generate these plots? or just load them into the dashboard and use that. probably the latter. -->
@@ -129,15 +143,13 @@ What observation of our runs that *failed* to discover 11-bit parity show us, it
 + hamming distance, modified by fitness sharing
 + maximal mutual information between intermediary states of the execution trace and the target
 
--- did anything but flatline in the face of 11-bit parity. Even when we heavily biased the instruction set, stripping it of everything but `MOV` and `XOR` -- the minimal ingredients necessary to construct a simple solution -- success would arrive in the form of a long, uneventful flatline, suddenly punctuated by a lucky guess and a leap, or maybe two, before landing on the solution by chance. <!-- TODO insert a figure or two here -->
+-- did anything but flatline in the face of 11-bit parity. If the parsimony pressure was allowed to remain in play, then the population would rapidly degenerate into single-instruction programs, typically constants. Even when we heavily biased the instruction set, stripping it of everything but `MOV` and `XOR` -- the minimal ingredients necessary to construct a simple solution -- success would arrive in the form of a long, uneventful flatline, suddenly punctuated by a lucky guess and a leap, somtimes two, before landing on the solution abruptly.
 
-So what is it about *parity*, this formally quite basic and threadbare GP benchmark, that makes it so difficult to discover?
-
-<!-- What does the existing lit say? Enumerate some possibilities. -->
+So what is it about *parity* that makes it so difficult to discover?
 
 ## Measures of Boolean Function Sensitivity
 
-We brought this problem up in a conversation with Douglas Kutach, back in August, and reflected that what seemed most conspicuous about parity is its "volatility": changing any single bit of the input will change the output. This seemed like an interesting thread to pull on, and the ensuing path of research led me to the question of the *[[sensitivity of boolean functions]]*. 
+We brought this problem up in a conversation with Douglas Kutach, back in August, and reflected that what seemed most conspicuous about parity is its "volatility": changing any single bit of the input will change the output. This seemed like an interesting thread to pull on, and the ensuing path of research led me to the question of the *sensitivity of boolean functions*. 
 
 
 <!-- TODO: consider moving this down to after the initial introduction of Sensitivity, and motivate it differently. that would give this section a smoother narrative arc! -->
@@ -153,7 +165,7 @@ By contrast, the function $\oplus: \mathbb{B}^3 \rightarrow \mathbb{B}$ carves $
 ![XOR on the 3-cube](./img/xor-on-3-cube.jpg){#fig:xor3cube}
 Let's fix some terminology here: the structures that we're considering here can be seen as the Hasse diagrams of Boolean lattices, but since we're primarily concerned with their connective properties, from this point on we're just refer to them as *n-dimensional hypercubes graphs*, or just *hypercubes*.
 
-Following this train of thought took us on a brief detour through the existing literature on the *[[sensitivity of boolean functions]]*. 
+Following this train of thought took us on a brief detour through the existing literature on the *sensitivity of boolean functions*. 
 
 
 ## From Sensitivity to Dirichlet Energy
@@ -218,9 +230,8 @@ end
 ## Dirichlet Energy Proximity as a Fitness Pressure
 
 We returned to the parity problems with a composite fitness function in which the distance between the Dirichlet energy of the candidate function and that of the target figured as a heavily-weighted component -- the other components being the features that served us well in the multiplexor experiments: 
-1. the Hamming distance between the candidate program's output and the output of the target function, modified by a fitness sharing algorithm that makes the reward for each test case inversely proportionate to the frequency with which solutions for that case appear in the population 
-2. the maximum *mutual information* obtaining between a candidate program's intermediate execution states and the target function's output vector
-3. a simple parsimony score, which assigns an award inversely proportionate to the candidate program's length, intended to mitigate bloat
+
+
 
 
 
@@ -322,7 +333,7 @@ We can consider, for example, three distinct ways of generating a "random functi
 
 The distribution of Dirichlet energy over sets of functions produced by each of these random generators (yielding 1000 samples each, with replacement) can be seen in figures {@fig:randomfunc3} through {@fig:randomfunc10}. What we find there is a pattern that appears to be fairly robust with respect to variations in program length (for the function generators of type 3) and expression depth (for function generators of type 2), as well as variations in the choice of primitive operations. In each case, the distribution of energy approximates a normal distribution with variance proportionate to dimension. The two non-uniform varieties of random function generator are biased in the direction of low-energy functions. This bias is far more pronounced in the case of the RTL function generator than its AST counterpart.
 
-This is significant insofar as the REFUSR GP engine, itself, represents functions through RTL instruction sequences. It is not difficult, however, to evolve a random population of programs towards higher energy distributions. If, for example, we initialize a population of random programs using the RTL program generator, and then let the fitness function simply be the Dirichlet energy measure of each candidate program -- thereby rewarding the maximization of Dirichlet energy -- then we can swiftly steer the distribution towards a more or less *normal* state, and, if we persevere, towards a state that is *highly* biased towards high energy functions. <!-- TODO I need the plots for this. reopen the pluto notebook if needed. -->
+
 
 
 ![Dirichlet energy distributions of randomly generated functions in 3 dimensions](energy_distributions_in_3_dimensions.png){#fig:randomfunc3}
@@ -340,6 +351,18 @@ This is significant insofar as the REFUSR GP engine, itself, represents function
 ![Dirichlet energy distributions of randomly generated functions in 10 dimensions](energy_distributions_in_10_dimensions.png){#fig:randomfunc10}
 
 
+This is significant insofar as the REFUSR GP engine, itself, represents functions through RTL instruction sequences. It is not difficult, however, to evolve a random population of programs towards higher energy distributions. If, for example, we initialize a population of random programs using the RTL program generator, and then let the fitness function simply be the Dirichlet energy measure of each candidate program -- thereby rewarding the maximization of Dirichlet energy -- then we can swiftly steer the distribution towards a more or less *normal* state, and, if we persevere, towards a state that is *highly* biased towards high energy functions. <!-- TODO I need the plots for this. reopen the pluto notebook if needed. -->
+
+In figures {@fig:population-energy-0} through {@fig:population-energy-1000}, we can see (through approximate fittings) how Dirichlet energy is distributed across a population of 100 programs (each implementing a 6-dimensional Boolean function) over the course of its evolution, where the sole selective pressure is a the pressure to maximize Dirichlet energy.
+
+![Distribution of Dirichlet energy in a newly-initialized population](Saturday-22-26-28.png){#fig:population-energy-0}
+
+![Distribution of Dirichlet energy in a population after 100 tournaments](Saturday-22-27-49.png){#fig:population-energy-100}
+
+![Distribution of Dirichlet energy in a population after 500 tournaments](Saturday-22-28-23.png){#fig:population-energy-500}
+
+![Distribution of Dirichlet energy in a population after 1000 tournaments](Saturday-22-28-38.png){#fig:population-energy-1000}
+
 # Probabilistic Property Testing: Beyond the Junta Property and into Signature Space
 
 ## Performance Improvements to the Junta Tester
@@ -347,34 +370,21 @@ This is significant insofar as the REFUSR GP engine, itself, represents function
 Improving the performance of the junta tester described in [[@Liu2018DistributionFreeJuntaTesting]]
 has been a major priority. In the original implementation, the tester struggled to deal with problems of about 15-20 bits in an interactive session on a workstation. This is more or less the dimension at which exhausting the input space at each stage of the evolutionary search becomes prohibitively expensive, and the use of PPT-informed approximations and constraints becomes increasingly relevant. Significant improvements to performance were obtained by two changes: parallelization of the search over the input set's powerset, and memoization of the powerset calculation.
 
-<!--
-The junta checker, in the outer loop of the main algorithm, searches the powerset of the set of inputs not yet found to be in the junta. This search is parallelized, leading to a nearly linear speedup in the number of available threads of execution. The occasions at which it is necessary to lock shared data structures tend to be brief and infrequent.
-
-The calculation of the powerset of the set of remaining inputs itself was being done in a redundant manner, leading to a large expenditure of both time and memory allocations early in the search. The calculation of the powerset was memoized, so that it would be performed only once per change in the set of remaining inputs to search. Locking only needed to be implemented around the memoized function itself (to protect the memoization data structure from concurrent modification) and so had minimal impact on parallelizability.
-
-Memoization improved performance by several orders of magnitude. Parallelization of the search over the input set powerset yielded a nearly linear scaling in available parallel threads of execution, meaning that on a typical workstation, Boolean functions in as many as 30 dimensions (i.e., $f : \mathbb{B}^{30} \rightarrow \mathbb{B}$) can be tested for the junta property in an interactive fashion. We anticipate that additional hardware resources will allow us to scale the performance in a linear fashion. 
--->
 
 ## Property Testing and Monotonicity
 
 We had previously developed a tester for a fundamental nontrivial property of boolean functions: the junta property. A subset of size $k$ of a function's inputs are said to form a $k$-junta when knowing that subset is sufficient to determine the output of the function for all inputs. Thus, determining this property permits one to restrict the search space for other properties to only those inputs known to influence the output of the function, since inputs outside the junta set can be ignored as they do not influence the function's output at any point in the input space.
 
-<!--
-We have considered whether the methods that we are currently using to test for the junta property can be fruitfully extended to other properties of Boolean functions, as well. Of particular interest here are the following:
+The testing of the junta property was a useful starting point for several reasons:
+ - First, it provides information about where in the input space the function's output is sensitive to its input, which is useful information for identifying and comparing functions, and for reducing the space of searches associated with these queries;
+ - Second, the state of the art algorithm for junta testing we chose for implementation is able to adapt its sampling strategy to both the function under study and the input distribution of interest, which is useful for focusing the search effort in the junta checking itself and in the generation of samples for other queries that may benefit from a bias toward the sensitive samples generated by the junta search;
+ - Third, the vector of sensitive input positions is itself a generally informative property that can be used to characterize and distinguish functions without assuming much about them.
 
- - Special properties of functions that arise in the study of graphs, such as the *Dirichlet energy* of a function, described in section {@sec:dirichlet};
- - Complexity measure and cryptographic related properties, such as block sensitivity and certificate complexity;
- - Quantum computation related properties such as quantum query complexity;
- - Linearity, a nonlocal and highly specific property which is efficiently tested for boolean functions only with fairly complex techniques such as spectral methods on truth table data;
- - Symmetry-related properties;
- - Tree-decomposition properties, which are already used as the hypotheses in the genetic module.
+To build on work on junta testing to embrace the testing of other properties that might be of value in characterizing and comparing general functions, we both considered testing methodologies for specific properties, and for general property testing. General property testing in terms of adaptive sampling procedures proved to be a useful technique in developing our novel adaptive sample set construction technique for function characterization, which is based on the sensitivity information yielded by the junta tester's search.
 
-None of these specific properties promised to be of use for the identification of general functions, since generally they suffered from either or both of two deficiencies: a) they would be unlikely to hold outside functions from the domains where they are defined, or b) testing methodologies for them are complex or of an efficiency inadequate for use in the inner loop of a search, which they would typically be in our application.
+The function class of interest is functions in practical use in systems controlled by a microcontroller, where in general many of the input bits will not be semantically meaningful alone but rather will appear as part of the many-bit representation of numbers, such as timers and counters, typically integers, and perhaps floating point numbers. Thus, the properties developed in terms of the structure of binary functions as such that do not consider these kinds of very specific correlations among input bits in determining the output would be unlikely to provide useful information.
 
-The final property family listed, tree-decomposition properties, was by contrast useful, but the information associated with the property, that is, an explicit representation of a function as a tree of boolean operations, is already developed in a more specific form than a tester would produce, that is, the explicit tree of operations, in the genetic module. Thus, testing for the property separately would be redundant, or at least would require devising a method for doing the work of the genetic module in a distinct and complementary manner, which is expected to be of similar complexity to the existing genetic module itself, and thus was deemed impractical to implement, and beside that, out of scope of the property testing module, which exists to inform the search performed by the genetic module using information from the function oracle, rather than to supplant the genetic module entirely.
-
--->
-This being the case, two other approaches were considered. First, a direct implementation of the general purpose function property testing methodology in  Chapter 6 of [[@Goldreich2017IntroductionPropertyTesting]]; and second, an adaptation of some of the concepts in the aforementioned technique to augment the existing junta tester with the ability to check a fairly general subfamily of general properties, but in a more efficient way than the fully general tester. The second approach was taken up and implemented.
+We considered two different approaches. First, a direct implementation of the general purpose function property testing methodology in  Chapter 6 of [[@Goldreich2017IntroductionPropertyTesting]]; and second, an adaptation of some of the concepts in the aforementioned technique to augment the existing junta tester with the ability to check a fairly general subfamily of general properties, but in a more efficient way than the fully general tester. The second approach was taken up and implemented.
 
 ## Pointwise property testing
 
@@ -392,7 +402,7 @@ This log is then condensed into an information-preserving fixed dimensional bina
 
 ### Hyperdimensional Codes
 
-The aforementioned information-preserving fixed dimensional binary vectors are computed according to techniques that Kanerva introduced in [[@Kanerva2009HyperdimensionalComputingIntroduction]]. The vectors of points and the property behavior at those points are hashed and the hash is used to seed a random number generator that is in turn used to generate a random sparse bit vector with fixed dimension and number of set bits. These individual vectors are combined into a vector of the same dimension that preserves information from the individual vectors and represents, in that alternate form, the set or superposition of the information in the individual vectors, which serves as the function fingerprint. Distances between the fixed-dimension fingerprint vectors correlate with distances between the original vectors of unbounded size, permitting efficient distance-based comparison. 
+The aforementioned information-preserving fixed dimensional binary vectors are computed according to techniques that Kanerva introduced in [@Kanerva2009HyperdimensionalComputingIntroduction]. The vectors of points and the property behavior at those points are hashed and the hash is used to seed a random number generator that is in turn used to generate a random sparse bit vector with fixed dimension and number of set bits. These individual vectors are combined into a vector of the same dimension that preserves information from the individual vectors and represents, in that alternate form, the set or superposition of the information in the individual vectors, which serves as the function fingerprint. Distances between the fixed-dimension fingerprint vectors correlate with distances between the original vectors of unbounded size, permitting efficient distance-based comparison. 
 
 Tools to compute and manipulate hyperdimensional codes were added to a supporting library containing tools for working with bitvectors.
 

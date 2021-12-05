@@ -322,10 +322,11 @@ function maximize_energy_ff(geo, i)
 			make_trace = false)
 		g.phenotype = (results = res, trace_info = [1 for _ in g.chromosome])
 	end
-	dirichlet = FF.dirichlet_energy_of_phenotype(
-		g.phenotype, 
+	dirichlet = FF.dirichlet_energy_of_results(
+		g.phenotype.results, 
 		geo.config) |> Float64
 	g.fitness = (
+		scalar = dirichlet,
 		dirichlet = dirichlet,
 		ingenuity = 0.0,
 		information = 0.0,
@@ -371,6 +372,9 @@ evolve(10)
 
 # ╔═╡ d0d786b3-1979-4f1d-97b3-9422f7654261
 evolve(100)
+
+# ╔═╡ 5e2b1003-02dc-4778-bc0c-c4e34a75ecb6
+evolve(500)
 
 # ╔═╡ 512dfc65-9cef-40ff-8692-e6664172498f
 evolve(1000)
@@ -452,6 +456,7 @@ evolve(10000)
 # ╠═58a32aa9-1ec9-4d9d-a613-1e48708ff649
 # ╠═46c9a01f-4a83-4876-8c4a-fefec75e75ce
 # ╠═d0d786b3-1979-4f1d-97b3-9422f7654261
+# ╠═5e2b1003-02dc-4778-bc0c-c4e34a75ecb6
 # ╠═512dfc65-9cef-40ff-8692-e6664172498f
 # ╠═57c914f2-bf7c-43ff-979d-b379514e5047
 # ╠═568dc58e-406a-4601-823e-ee4cd66d7bcb
