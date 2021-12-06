@@ -228,6 +228,11 @@ function dirichlet_energy(f, dim)
 end
 ```
 
+![Dirichlet energy of 3-dimensional AND function: 1/4. Vertex shade is relative to local energy / local sensitivity levels. Rectangular vertices evaluate to 0 and circular vertices evaluate to 1.](and-dirichlet-3-cube.png){#fig:and-dirichlet-3-cube}
+
+![Dirichlet energy of 3-dimensional multiplexor: 1/2](img/multiplexor-dirichlet-3-cube.png){#fig:mux-dirichlet-3-cube}
+
+![Dirichlet energy of 3-dimensional parity function: 1](img/parity-dirichlet-3-cube.png){#fig:parity-dirichlet-3-cube}
 
 <!-- motivate, define, give examples -->
 
