@@ -383,9 +383,11 @@ Given an input function mapping $\mathbb{B}^n \rightarrow \mathbb{B}^1$, we eval
 
 k-monotonicity is defined such that a function f is said to be k-monotonic if, given an ordering relation $\leq$ on inputs, and the function $f$, for all sequences of inputs $x_i$, for all $i$, $x(i-1) \leq x_i$, then $f(x_i) \neq f(x(i-1))$ at most $k$ times.
     
+![diagram-of-fingerprint-algorithm.png](img/diagram-of-fingerprint-algorithm.png){#fig:fingerprints}
+
 Once these properties are collected, they are aggregated into a distance-preserving, fixed dimensional binary vector. Each dimension of the binary vector can be efficiently mapped to the presence of a property at an evaluated dimension of the original function.
     
-The psuedo-code of the overall property gathering module is outlined below (see [@Kanerva2009HyperdimensionalComputingIntroduction]).
+The pseudo-code of the overall property gathering module, schematized in figure {@fig:fingerprints}, is outlined below:
     
 1.  A vector of points is sampled by the _Sampler _
 2.  Properties are extracted from this point vector as detailed above
@@ -393,6 +395,8 @@ The psuedo-code of the overall property gathering module is outlined below (see 
 4.  The hash is used to seed a random number generator.
 5.  The random number generator is used to seed a bit vector with fixed dimension
 6.  This fixed dimension, bi-vector is a superposition of the original vector and forms the _function fingerprint_
+
+The reader may consult see [@Kanerva2009HyperdimensionalComputingIntroduction] for further details.
     
 # Next Steps
     
