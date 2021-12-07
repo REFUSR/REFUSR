@@ -28,10 +28,9 @@ Following the August PI meeting and the discussion regarding electrical glitchin
 
 ## Board Revisions
 
-Following the August PI meeting and demonstration of our hardware, a soldered-down version of the Refuduino was built, using the same BOM as the initial breadboard-ed prototype (see figure {@fig:refuduinoV2}). Screw-terminals have been added to this build allowing the physical connections for signalling to be changed as the software was changed. Development is also proceeding with a Teensy 4.1 board, which uses an ARM Cortex M7 32-bit CPU with onboard Ethernet controller that provides the ability to run MODBUS over TCP
-. The Refuduino can now act as a MODBUS Server and we have exercised this with PyModBus scripts running on a Linux host on a local network in our hardware lab. The OpenPLC server remains connected to the Teensy via an IDC cable, unaware that the board is also connected to a network and other MODBUS TCP clients. 
+Following the August PI meeting and demonstration of our hardware, a soldered-down version of the Refuduino was built, using the same BOM as the initial breadboard-ed prototype (see figure {@fig:refuduinoV2}). Screw-terminals have been added to this build allowing the physical connections for signalling to be changed as the software was changed. Development is also proceeding with a Teensy 4.1 board, which uses an ARM Cortex M7 32-bit CPU with onboard Ethernet controller that provides the ability to run MODBUS over TCP. The Refuduino can now act as a MODBUS Server and we have exercised this with PyModBus scripts running on a Linux host on a local network in our hardware lab. The OpenPLC server remains connected to the Teensy via an IDC cable, unaware that the board is also connected to a network and other MODBUS TCP clients. 
 
-This takes the MCU from a place of acting as a simple target device for the OpenPLC server into one where it can fully interact with other inspection, logging and analysis tools, while at the same time continuing its role in the Symbolic Expression computation task.  We are interested in possible further development of this tool with others either inside or outside the ReMath effort who might find a sort of "PLC Pineapple" device appealing. 
+This takes the MCU from a place of acting as a simple target device for the OpenPLC server into one where it can fully interact with other inspection, logging and analysis tools, while at the same time continuing its role in the Symbolic Expression computation task.  We are interested in possible further development of this tool and discussions with others either inside or outside of the ReMath effort who might find this sort of device useful or interesting.  
 
 ![Refuduino V2](img/refuduinoV2.jpeg){#fig:refuduinoV2}
 
@@ -382,3 +381,7 @@ Tools to compute and manipulate hyperdimensional codes were added to a supportin
 Our eventual goal is to exploit these distance measures as a *fitness pressure*, providing yet another gradient for our genetic search.
 
 
+<<<<<<< Updated upstream
+=======
+# Works Cited
+>>>>>>> Stashed changes
