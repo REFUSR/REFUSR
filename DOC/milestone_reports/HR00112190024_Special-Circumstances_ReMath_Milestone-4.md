@@ -30,9 +30,9 @@ Following the August PI meeting and the discussion regarding electrical glitchin
 
 ## Board Revisions
 
-Following the August PI meeting and demonstration of our hardware, a soldered-down version of the Refuduino was built, using the same BOM as the initial breadboard-ed prototype (see figure {@fig:refuduinoV2}). Screw-terminals have been added to this build allowing the physical connections for signalling to be changed as the software was changed. Development is also proceeding with a Teensy 4.1 board, which uses an ARM Cortex M7 32-bit CPU with onboard Ethernet controller that provides the ability to run MODBUS over TCP. The Refuduino can now act as a MODBUS Server and we have exercised this with PyModBus scripts running on a Linux host on a local network in our hardware lab. The OpenPLC server remains connected to the Teensy via an IDC cable, unaware that the board is also connected to a network and other MODBUS TCP clients. 
+Following the August PI meeting and demonstration of our hardware, a soldered-down version of the Refuduino was built, using the same BOM as the initial breadboard-ed prototype (see figure {@fig:refuduinoV2}). Screw-terminals have been added to this build allowing the physical connections for signalling to be changed as the software was changed. Development is also proceeding on a second system using an ATMEGA 2560 MCU (figure {@fig:catamaran}). This processor has 56 GPIOs vs. the 13 of the Arduino Nano as well as 256K bytes flash memory vs 32K on the Nano. 
 
-This takes the MCU from a place of acting as a simple target device for the OpenPLC server into one where it can fully interact with other inspection, logging and analysis tools, while at the same time continuing its role in the Symbolic Expression computation task.  We are interested in possible further development of this tool and discussions with others either inside or outside of the ReMath effort who might find this sort of device useful or interesting.  
+We continue to be interested in collaboration and/or feedback from other REFUSR participants and those engaged in the development of similar hardware. 
 
 
 ![Refuduino V2](img/refuduinoV2.jpeg){#fig:refuduinoV2}
@@ -127,19 +127,13 @@ The fitness function used in those experiments was a weighted sum of three diffe
 The situation that confronted us when we turned to the 6-bit parity problem looked quite different. If we left the system running for long enough, eventually an answer would sometimes be found, but an examination of the logs made this appear to be little more than dumb luck. None of the phenotypic traits we'd designed seemed to have discovered any reliable gradient in the fitness landscape, until the very end. As trivial as the solution to the problem might be for a human programmer to solve -- odd-parity is, after all, just an $n$-ary XOR, and even-parity its negation -- for our existing GP system, it was a needle in a haystack. The situation was even worse when we attempted to solve 11-bit parity, which brought the system to a standstill, each of our fitness metrics flatlined. What few successes we had depended on the cheap trick of reducing the system's primitive operations to just `XOR` and `MOV`, and even then it could take upwards of **26,000 tournaments** to find a solution.
 
 
-![[parity-11-sans-dirichlet-plot.png]]
+This shouldn't have come as a great surprise. The genetic programming literature is scattered with references to *parity* being a particularly difficult problem to solve. The classic point of reference, on this score, is John Koza's 1992 tome, [@Koza1992GeneticProgrammingProgramming]. Koza recognized parity as a particularly difficult function to discover through evolutionary synthesis. Even in as few as four dimensions, the task proved arduous (see figures {@fig:koza-odd-parity-4} and {@fig:koza-even-parity-4}).
 
-![[parity-11-sans-dirichlet-length.png]]
+![Plot taken from John Koza's *Genetic Programming*, measuring difficulty of solving 4-bit odd-parity in a tree-based GP system.](img/koza-odd-4-parity.png){#fig:koza-odd-parity-4}
 
-<!-- NEED PLOTS provide some details, throw up some plots -->
-<!-- TODO: spin up another Pluto notebook to generate these plots? or just load them into the dashboard and use that. probably the latter. -->
+![Plot taken from John Koza's *Genetic Programming*, measuring difficulty of solving 4-bit even-parity in a tree-based GP system.](img/koza-even-4-parity.png){#fig:koza-even-parity-4}
 
-This shouldn't have come as a great surprise. The genetic programming literature is scattered with references to *parity* being a particularly difficult problem to solve. The classic point of reference, on this score, is John Koza's 1992 tome, [@Koza1992GeneticProgrammingProgramming]. Koza recognized parity as a particularly difficult function to discover through evolutionary synthesis. Even in as few as four dimensions, the task proved arduous. 
-
-![](img/koza-odd-4-parity.png)
-![](img/koza-even-4-parity.png)
-
-Without the support for modularity afforded by *automatically defined functions* (ADFs), genetic search for parity functions of higher dimensionality remained intractable. (With ADFs, he was able to reach 11-bit parity functions.)
+Without the support for modularity afforded by *automatically defined functions* (ADFs), genetic search for parity functions of higher dimensionality remained intractable. With ADFs, he was able to reach 11-bit parity functions, albeit at great computational cost.
 
 But *why* is parity so difficult? What is it about that function in particular that makes it recalcitrant to genetic search, or, more precisely, to the measures we had so far implemented to track our evolving populations' proximity to their target? It's not a function of particularly great Komolgorov complexity, being in the end nothing more than an $n$-ary `XOR` or `IFF` (for odd and even parity, respectively).
 
@@ -152,12 +146,10 @@ What observation of our runs that *failed* to discover 11-bit parity show us, it
 
 So what is it about *parity* that makes it so difficult to discover?
 
-## Measures of Boolean Function Sensitivity
+## From Boolean Function Sensitivity to Dirichlet Energy on the Hypercube
 
 We brought this problem up in a conversation with Douglas Kutach, back in August, and reflected that what seemed most conspicuous about parity is its "volatility": changing any single bit of the input will change the output. This seemed like an interesting thread to pull on, and the ensuing path of research led me to the question of the *sensitivity of boolean functions*. 
 
-
-<!-- TODO: consider moving this down to after the initial introduction of Sensitivity, and motivate it differently. that would give this section a smoother narrative arc! -->
 
 The first idea that occurred to us was that it might be meaningful to classify a $n$-ary Boolean function $f$ by the number of maximal contiguous posets in the partition induced by $f$ on the lattice $\mathbb{B}^n$. 
  
@@ -173,10 +165,7 @@ Let's fix some terminology here: the structures that we're considering here can 
 
 Following this train of thought took us on a brief detour through the existing literature on the *sensitivity of boolean functions*. 
 
-
-## From Sensitivity to Dirichlet Energy
-
-The notion of measuring Boolean functions' "sensitivity", in the sense we're going to describe here, first surfaced in Noam Nisan's 1989 paper, "CREW PRAMS and Decision Trees" [[@Nisan1989CREWPRAMSDecision]]. What Nisan provides us with is as follows:
+The notion of measuring Boolean functions' "sensitivity", in the sense we're going to describe here, first surfaced in Noam Nisan's 1989 paper, "CREW PRAMS and Decision Trees" [@Nisan1989CREWPRAMSDecision]. What Nisan provides us with is as follows:
 
 > Notation: let $w$ be a boolean string of length $n$, let $S$ be any subset of indices, $S \subset \{1 \cdots n \}$, then $w^{(S)}$ means the string $w$ with all bits in $S$ flipped. I.e., $w^{(S)}$ differs from $w$ exactly on $S$.
 
@@ -200,9 +189,7 @@ If this formula seems familiar, it's because what we're looking at now a measure
 
 ### Measuring Dirichlet Energy
 
-<!-- TRANSITION --> <!-- TODO: this should be easy to finish up today. going to do so after a few quick errands -->
-
-In the code below, `HyperCube` is just an alias for a labelled graph type, which, in this context, is exclusively used to represent a $n$-dimensional Boolean cubes, where each vertex is labelled with a $n$-bit vector, and edges connect all and only those vertices whose vectors differ by a single bitflip. (That is to say, adjacent vertices stand at a hamming distance of 1 from one another.)
+We implemented a simple Julia library for measuring Dirichlet energy of arbitrary Boolean functions on $n$-dimensional hypercubes. In the code below, `HyperCube` is an alias for a labelled graph type, which, in this context, is exclusively used to represent a $n$-dimensional Boolean cubes, where each vertex is labelled with a $n$-bit vector, and edges connect all and only those vertices whose vectors differ by a single bitflip.
 
 ```julia
 function local_energy(Q, v)::Rational
@@ -228,22 +215,19 @@ function dirichlet_energy(f, dim)
 end
 ```
 
+This measure of Dirichlet energy differs from the formula above on just one point: rather than taking the *sum* of squared differences between $f(v)$ and $f(v')$, where $v'$ is a neighbour of $v$, we take the mean, or expected difference. This serves to normalize the measure of Dirichlet energy, ensuring that the energy of $f$ will always fall between 0 and 1. This will make it a little bit easier to make use of Dirichlet energy measures in our fitness functions -- which is where all of this is headed.
+
+Figures {@fig:and-dirichlet-3-cube}, {@fig:mux-dirichlet-3-cube}, and {@fig:parity-dirichlet-3-cube} each illustrate an intermediate stage of the Dirichlet energy calculation for the 3-dimensional AND, MUX, and PARITY (or XOR) functions, respectively. Each vertex, again, represents a parameter set. Where the function evaluates the vertex as false (0), the vertex is shown as a rectangle. Where the function evaluates it as true (1), it's shown as a circle. Each vertex is shaded relative to its *local Dirichlet energy*, or what Nisan called its *local sensitivity* (these two local properties are equivalent so long as we're dealing with Boolean functions on the hypercube). 
+
 ![Dirichlet energy of 3-dimensional AND function: 1/4. Vertex shade is relative to local energy / local sensitivity levels. Rectangular vertices evaluate to 0 and circular vertices evaluate to 1.](img/and-dirichlet-3-cube.png){#fig:and-dirichlet-3-cube}
 
 ![Dirichlet energy of 3-dimensional multiplexor: 1/2](img/multiplexor-dirichlet-3-cube.png){#fig:mux-dirichlet-3-cube}
 
 ![Dirichlet energy of 3-dimensional parity function: 1](img/parity-dirichlet-3-cube.png){#fig:parity-dirichlet-3-cube}
 
-<!-- motivate, define, give examples -->
-
-<!-- diagrams, using the visualize_cube functions in the Sensitivity module. -->
-
 ## Dirichlet Energy Proximity as a Fitness Pressure
 
-We returned to the parity problems with a composite fitness function in which the distance between the Dirichlet energy of the candidate function and that of the target figured as a heavily-weighted component -- the other components being the features that served us well in the multiplexor experiments: 
-
-
-
+With a means of measuring Dirichlet energy in hand, we returned to the parity problems with a composite fitness function for which the distance between the Dirichlet energy of the candidate function and that of the target figured as a heavily-weighted component, in addition to the two other metrics that served us well in the multiplexor experiments:
 
 
 | Feature                    | Weight |
@@ -255,12 +239,11 @@ We returned to the parity problems with a composite fitness function in which th
 
 ### Returning to the 11-bit Parity Problem
 
-The 11-bit parity problem yielded readily to populations for which Dirichlet energy proximity to the target factored as a significant selective pressure, as can be seen in figures {@fig:parity11-trial1} and {@fig:parity11-trial2}.
+The 11-bit parity problem yielded readily to this new fitness function, as can be seen in figures {@fig:parity11-trial1} and {@fig:parity11-trial2}.
 
-![](img/parity-11-plot-trial-1.png){#fig:parity11-trial1}
+![The performance of Cockatrice, equipped with a Dirichlet energy sensitive fitness function, on the 11-bit parity problem (first trial)](img/parity-11-plot-trial-1.png){#fig:parity11-trial1}
 
-
-![](img/parity-11-plot.png){#fig:parity11-trial2}
+![The performance of Cockatrice, equipped with a Dirichlet energy sensitive fitness function, on the 11-bit parity problem (second trial)](img/parity-11-plot.png){#fig:parity11-trial2}
 
 
 #### Specimen RTL Code
@@ -297,7 +280,7 @@ The effective code for the champion of the second trial of the 11-bit parity exp
 
 Increasing the dimension to 12 posed no serious challenge for the system, which has shown itself capable of consistently finding solutions in fewer than 10,000 tournaments (since the tournament size has been set to 6 in these experiments, that amounts to fewer than 60,000 individual evaluations).
 
-![](./img/parity-12-plot.png)
+![The performance of Cockatrice, equipped with a Dirichlet energy sensitive fitness function, on the 12-bit parity problem](./img/parity-12-plot.png)
 
 
 ## 13-bit Parity
@@ -306,15 +289,12 @@ Even if we increase the dimension yet again, and move from a search space of $2^
 
 It may come as some surprise that the number of tournaments required to solve the 13-dimensional case scarcely appeared to exceed the number required to solve 12-dimensional parity. In our first stab at the 13-bit case, in fact, approximately 2000 *fewer* tournaments were needed than were needed in the 12-bit case (see figure {@fig:parity-13}). It would be even more surprising if this result surived a statistically significant number of trials, though it is *plausible* that a reduction in the necessary number of tournaments could result from the doubling of the size of the training set that occurs when we increase the dimension of the function.
 
-![](img/parity-13-plot.png){#fig:parity-13}
+![The performance of Cockatrice, equipped with a Dirichlet energy sensitive fitness function, on the 13-bit parity problem](img/parity-13-plot.png){#fig:parity-13}
 
 The solution in this particular trial came from the island whose interaction matrix is presented in the lower left quadrant of figure {@fig:parity13im}. This is, among other things, a striking example of the difference in the fitness landscapes furnished by Dirichlet energy measurements on the one hand, and the Hamming distance metric most often used in Boolean symbolic regression.
 
-![Interaction matrices for the four subpopulations.](img/parity-13-im.png){#fig:parity13im}
+![Interaction matrices for the four subpopulations of the 13-bit parity experiment.](img/parity-13-im.png){#fig:parity13im}
 
-
-
-<!-- And we can expect the performance of Dirichlet energy proximity, as a fitness function, to be proportionate to the distance of the target function's energy from 0.5 -- the peak of the binomial distribution of energy across functions. -->
 
 
 ### The Shape of the Dirichlet Energy Distribution
@@ -379,11 +359,11 @@ In figures {@fig:population-energy-0} through {@fig:population-energy-1000}, we 
 
 To build on work on junta testing to embrace the testing of other properties that might be of value in characterizing and comparing general functions, we both considered testing methodologies for specific properties, and for general property testing. General property testing in terms of adaptive sampling procedures proved to be a useful technique in developing our novel adaptive sample set construction technique for function characterization, which is based on the sensitivity information yielded by the junta tester's search.
 
-The approach uses concepts from the general purpose function property testing methodology in Chapter 6 of Oded Goldreich, _Introduction to Property Testing_, 2021; and also draws on ideas about function sensitivity measures to augment the existing junta tester with the ability to characterize a function based on local rather than global properties, which yields more information and can be implemented in a simpler and more efficient way than the general property tester. 
+The approach uses concepts from the general purpose function property testing methodology in Chapter 6 of Oded Goldreich, _Introduction to Property Testing_, 2021 [@Goldreich2017IntroductionPropertyTesting]; and also draws on ideas about function sensitivity measures to augment the existing junta tester with the ability to characterize a function based on local rather than global properties, which yields more information and can be implemented in a simpler and more efficient way than the general property tester. 
 
 We have implemented an adaptive method for characterizing functions by testing _pointwise properties_ i.e. local properties of the function defined in terms of the perturbation of a single bit of a point in the domain of the binary function being characterized.
 
-Previous work developed a tester for a fundamental nontrivial property of boolean functions: the junta property. A subset of size _k_ of a function's inputs are said to form a _k_-junta when knowing that subset is sufficient to determine the output of the function for all inputs. Thus, determining this property permits one to restrict the search space for other properties to only those inputs known to influence the output of the function, since inputs outside the junta set can be ignored as they do not influence the function's output at any point in the input space.
+Previous work developed a tester for a fundamental nontrivial property of boolean functions: the junta property. A subset of size $k$ of a function's inputs are said to form a $k$-junta when knowing that subset is sufficient to determine the output of the function for all inputs. Thus, determining this property permits one to restrict the search space for other properties to only those inputs known to influence the output of the function, since inputs outside the junta set can be ignored as they do not influence the function's output at any point in the input space.
 
 The testing of the junta property was a useful starting point for several reasons:
  - First, it provides information about where in the input space the function's output is sensitive to certain perturbations of its input, which is useful information for identifying and comparing functions, and for reducing the space of searches associated with these queries. This notion of sensitivity is related to the Nisan sensitivity and Dirichlet energy measures used elsewhere in the project.
@@ -394,7 +374,7 @@ The testing of the junta property was a useful starting point for several reason
 
 In order to take advantage of previous work on junta testing to support the identification of general functions, the notion of a pointwise property test was defined and used to implement a sampling-based approach to property testing at individual input points. A _pointwise property_ is one that can be defined in terms of the behavior of the function under study at single input points. It includes many properties of interest, notably 1-monotonicity.
 
-_k_-monotonicity is defined such that a function _f_ is said to be _k_-monotonic if, given an ordering relation _≤_ on inputs, and the function _f_, for all sequences of inputs x_i, for all i, x_(i-1) ≤ x_i, then f(x_i) ≠ f(x_(i-1)) at most _k_ times. In the case of 1-monotonicity, checking sequences of length 1, that is, perturbations of a single input at a single bit, suffice to establish the property locally in the neighborhood of the original and perturbed inputs.
+$k$-monotonicity is defined such that a function $f$ is said to be $k$-monotonic if, given an ordering relation $\leq$ on inputs, and the function $f$, for all sequences of inputs $x_i$, for all $i$, $x_{(i-1)} \leq x_i$, then $f(x_i) \neq f(x_{(i-1)})$ at most $k$ times. In the case of 1-monotonicity, checking sequences of length 1, that is, perturbations of a single input at a single bit, suffice to establish the property locally in the neighborhood of the original and perturbed inputs.
 
 This observation inspired the following approach to function identification by computing fingerprints based on pointwise property behavior at sensitive points.
 
@@ -404,15 +384,15 @@ Based on the junta tester's operation in terms of a search for inputs that, when
 
 This log is then condensed into an approximately information-preserving fixed dimensional binary vector that serves as a signature of the function's pointwise property behavior, by means of which functions can be compared directly in terms of where in their input spaces the pointwise property under consideration does or does not hold.
     
-![diagram-of-fingerprint-algorithm.png](img/diagram-of-fingerprint-algorithm.png){#fig:fingerprints}
+![Diagram of the function fingerprinting algorithm.](img/diagram-of-fingerprint-algorithm.png){#fig:fingerprints}
 
-The fingerprinting process is outlined in psuedo-code below.
+The fingerprinting process is outlined in pseudo-code below.
 
 1. The junta sampler yields a set of _sensitive input points_
 2. Properties are tested in these local neighborhoods as described above
 3. These (point, point, property) tuples are hashed.
 4. The hash is used to compute a fixed size bit pattern with few set bits.
-5. The patterns of each (point, point, property) tuple are combined into a composite vector of the same fixed dimension representing function behavior on the entire sample set according to techniques in Kanerva 2009, _Hyperdimensional Computing_. This vector is the_function fingerprint_. 
+5. The patterns of each (point, point, property) tuple are combined into a composite vector of the same fixed dimension representing function behavior on the entire sample set according to techniques in [@Kanerva2009HyperdimensionalComputingIntroduction]. This vector is the _function fingerprint_. 
 6. Two functions are compared by measuring the distance between their fingerprint vectors on the same sample set. 
 
 ## Future Work
@@ -424,4 +404,3 @@ We are considering other uses for the fingerprinting module besides the main imp
 We may also be able to develop and exploit a better understanding of the relationships between the pragmatic notion of binary function sensitivity that informs the junta search and the aforementioned Nisan sensitivity and Dirichlet energy. The junta search's use of single-point perturbation sensitive samples is a more local version of those sensitivity measures, which consider the entire neighborhood of single-bit perturbations at a given input point.
 
 # Works Cited
-
