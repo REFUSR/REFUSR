@@ -30,9 +30,9 @@ Following the August PI meeting and the discussion regarding electrical glitchin
 
 ## Board Revisions
 
-Following the August PI meeting and demonstration of our hardware, a soldered-down version of the Refuduino was built, using the same BOM as the initial breadboard-ed prototype (see figure {@fig:refuduinoV2}). Screw-terminals have been added to this build allowing the physical connections for signalling to be changed as the software was changed. Development is also proceeding on a second system using an ATMEGA 2560 MCU (figure {@fig:catamaran}). This processor has 56 GPIOs vs. the 13 of the Arduino Nano as well as 256K bytes flash memory vs 32K on the Nano. 
+Following the August PI meeting and demonstration of our hardware, a soldered-down version of the Refuduino was built, using the same BOM as the initial breadboard-ed prototype (see figure {@fig:refuduinoV2}). Screw-terminals have been added to this build allowing the physical connections for signalling to be changed as the software was changed. Development is also proceeding with a Teensy 4.1 board, which uses an ARM Cortex M7 32-bit CPU with onboard Ethernet controller that provides the ability to run MODBUS over TCP. The Refuduino can now act as a MODBUS Server and we have exercised this with PyModBus scripts running on a Linux host on a local network in our hardware lab. The OpenPLC server remains connected to the Teensy via an IDC cable, unaware that the board is also connected to a network and other MODBUS TCP clients. 
 
-We continue to be interested in collaboration and/or feedback from other REFUSR participants and those engaged in the development of similar hardware. 
+This takes the MCU from a place of acting as a simple target device for the OpenPLC server into one where it can fully interact with other inspection, logging and analysis tools, while at the same time continuing its role in the Symbolic Expression computation task.  We are interested in possible further development of this tool and discussions with others either inside or outside of the ReMath effort who might find this sort of device useful or interesting.  
 
 
 ![Refuduino V2](img/refuduinoV2.jpeg){#fig:refuduinoV2}
@@ -424,3 +424,4 @@ We are considering other uses for the fingerprinting module besides the main imp
 We may also be able to develop and exploit a better understanding of the relationships between the pragmatic notion of binary function sensitivity that informs the junta search and the aforementioned Nisan sensitivity and Dirichlet energy. The junta search's use of single-point perturbation sensitive samples is a more local version of those sensitivity measures, which consider the entire neighborhood of single-bit perturbations at a given input point.
 
 # Works Cited
+
