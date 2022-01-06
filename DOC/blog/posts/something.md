@@ -1,7 +1,7 @@
 ---
 title: Mind Flayers
 author: Janet Jackson
-abstract: They are extremely dangerous.
+abstract: "They are extremely dangerous. Extreme caution should be taken at all times when dealing with Mind Flayers, or as they are known amongs themselves, the Ilithid."
 date: 1988-02-23
 tags: [mindflayers, danger, watchout]
 ---
@@ -24,8 +24,13 @@ flammasque adveniens canendo faticinasque [virgo quaecumque
 
 Here are some things:
 
-- [ ] One
-- [ ] Two
+- One
+- Two
+
+Here are some more:
+
+1. Thing A
+2. Thing B
 
 
 Vulgus et nihil Phaethon percepto **gurgite** sic aequor suorum, ora iam
