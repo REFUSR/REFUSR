@@ -6,6 +6,8 @@ abstract: "A quick introduction to the internal blogging system, and some instru
 tags: [blogging, readme]
 ---
 
+# About this Blog
+
 Hi, everybody. 
 
 I've set up this blogging platform so that we can keep one another up to date on the various limbs of the REFUSR project.
