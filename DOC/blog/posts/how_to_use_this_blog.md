@@ -17,6 +17,7 @@ To make a new blog post, all you need to do is create a new markdown file in the
 Each post needs to begin with a YAML header block, like so:
 
 ```
+
 ---
 title: "How to Use this Blog"
 author: Lucca Fraser
@@ -24,6 +25,7 @@ date: 2022-01-06
 abstract: "A quick introduction to the internal blogging system, and some instructions for use."
 tags: [blogging, readme]
 ---
+
 ```
 
 This information will be used to populate the table of contents and generate the header you see at the top of this page.
