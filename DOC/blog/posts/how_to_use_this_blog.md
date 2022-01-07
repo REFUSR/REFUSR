@@ -1,6 +1,6 @@
 ---
 title: "How to Use this Blog"
-author: Lucca Fraser
+author: Olivia Lucca Fraser
 date: 2022-01-06
 abstract: "A quick introduction to the internal blogging system, and some instructions for use."
 tags: [blogging, readme]
@@ -20,7 +20,7 @@ Each post needs to begin with a YAML header block, like so:
 
 ---
 title: "How to Use this Blog"
-author: Lucca Fraser
+author: Olivia Lucca Fraser
 date: 2022-01-06
 abstract: "A quick introduction to the internal blogging system, and some instructions for use."
 tags: [blogging, readme]
