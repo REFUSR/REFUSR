@@ -68,11 +68,6 @@ a.top:hover {
     text-decoration: none;
 }
 
-pre {
-    line-height: 100%
-    font-size: 130%;
-}
-
 
 h1 {
     font-family: "GarBo", Garamond, Georgia, serif;
@@ -231,8 +226,8 @@ blockquote {
     border-color: var(--quietcolor);
 }
 
-code {
-    font-size: 100%;
+pre {
+    font-size: 120%;
     display: block;
     background-color: var(--forecolor);
     padding-left: 2em;
@@ -243,7 +238,11 @@ code {
     counter-reset: line;
     font-weight: bold;
     font-family: Mono;
+}
 
+code {
+  font-family: Mono;
+  font-size: 80%;
 }
 
 
@@ -268,7 +267,7 @@ code {
         margin-right: 13%;
         color: var(--forecolor);
     }
-    code {
+    pre {
         font-size: 80%;
         display: block;
         background-color: var(--forecolor);
@@ -279,7 +278,9 @@ code {
         color: #00ff85;
         counter-reset: line;
         font-weight: bold;
-
+    }
+    code {
+      font-family: Mono;
     }
 
 }

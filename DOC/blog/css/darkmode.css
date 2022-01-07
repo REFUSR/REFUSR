@@ -13,11 +13,17 @@
   src: url("/css/fonts/lmmonoprop10-regular.otf");
 }
 
+@font-face {
+  font-family: "Code";
+  src: url("/css/fonts/Hermit-medium.otf");
+}
+
 :root {
   --forecolor:#fdfefc;
   --backcolor:#242022;
   --hovercolor:hotpink;
   --navcolor:papayawhip;
+  --codecolor:#00ff85;
 }
 
 
@@ -52,10 +58,6 @@ a.top:hover {
     text-decoration: none;
 }
 
-pre {
-    line-height: 100%
-    font-size: 130%;
-}
 
 .container {
     width: 85vw;
@@ -66,7 +68,8 @@ pre {
 
 h1 {
     font-family: "GarBo", Garamond, Georgia, serif;
-    line-height: 120%
+    line-height: 100%;
+    font-size: 210%;
 }
 
 h2 {
@@ -211,19 +214,23 @@ blockquote {
     border-color: #8d8e8c;
 }
 
-code {
-    font-size: 100%;
+pre {
+    font-size: 120%;
     display: block;
-    background-color: darkgray;
+    background-color: black;
     padding-left: 2em;
     padding-right: 2em;
     padding-top: 2em;
     padding-bottom: 2em;
-    color: #00ff85;
+    color: var(--codecolor);
     counter-reset: line;
     font-weight: bold;
-    font-family: Courier, monospace;
+}
 
+code {
+  font-family: Code;
+  font-weight: bold;
+  font-size: 80%;
 }
 
 
@@ -236,7 +243,7 @@ code {
 
 
 
-@media only screen and (max-width: 1000px) {
+@media only screen and (max-width: 1200px) {
     #main {
         font-size: 110%;
         margin-left: 3%;
@@ -244,18 +251,20 @@ code {
         width: 94%;
         color: var(--forecolor);
     }
-    code {
+    pre {
         font-size: 80%;
         display: block;
-        background-color: darkgray;
+        background-color: black;
         padding-left: 1em;
         padding-right: 1em;
         padding-top: 1em;
         padding-bottom: 1em;
-        color: #00ff85;
+        color: var(--codecolor);
         counter-reset: line;
         font-weight: bold;
-
+    }
+    code {
+      font-family: Mono;
     }
 
 }
