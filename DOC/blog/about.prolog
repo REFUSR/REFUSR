@@ -13,6 +13,7 @@ admin('Lucca Fraser').
 email('lucca.fraser@special-circumstanc.es').
 domain('refusr.eschatronics.ca').
 port(8008).
+bind(localhost).
 abstract('An internal blog for the REFUSR working group.').
 repo('https://github.com/REFUSR/REFUSR').
 
