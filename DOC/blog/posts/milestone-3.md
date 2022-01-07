@@ -172,7 +172,7 @@ REFUSR's linear genotypes are composed of a series of primitive register transfe
 
 The following snippet of code can be taken as a concrete example. This is register transfer code formed the genotype for a champion specimen in an experiment in which the goal was to evolve a 4-to-1 multiplexor gate. 
 
-~~~{.asm}
+```
 R[01] ← ~ D[03]
 R[04] ← mov D[01]
 R[01] ← R[01] & R[04]
@@ -205,13 +205,13 @@ R[03] ← ~ R[02]
 R[01] ← R[01] | R[03]
 R[01] ← R[01] & R[04]
 R[01] ← R[01] & R[04]
-~~~
+```
 
 Internally, each instruction is defined as a Julia `struct`, with fields for the source and destination register, the operator (a function), and that operator's arity. (Though we're currently not using any, since they invariably destroy execution information and inhibit evolutionary search, constants can be defined as nullary functions in this fashion, by setting the arity field to zero, and the operator field to `() -> true` or `() -> false`.)
 
 We can translate each instruction to a simple symbolic expression -- indeed, a member of the Julia `Expr` type -- that expresses an assignment. 
 
-~~~{.julia}
+```
 
 function to_expr(inst::Inst)
     op = nameof(inst.op)
@@ -227,14 +227,14 @@ function to_expr(inst::Inst)
         :($dst = $(inst.op()))
     end
 end
-~~~
+```
 
 
 A sequence of instructions can then be composed into a single assignment expression by performing a series of subexpression replacements, while iterating backwards through the instruction sequence. Whenever we encounter an assignment of the form `lhs := rhs`, we simply replace all occurrences of the subexpression `lhs` with the expression `rhs` in our accumulated expression. 
 
 When the iteration is complete, we are left with a cumulative assignment instruction, which has the output register (`R[1]`) on the left-hand side, and the compound expression, generated through successive replacements, on the right. 
 
-~~~{.julia}
+```
 function to_expr(code::Vector{Inst}; incremental_simplify=true)
     code = strip_introns(code, [1])
     if isempty(code)
@@ -252,7 +252,7 @@ function to_expr(code::Vector{Inst}; incremental_simplify=true)
     # can be replaced with `false`.
     Expressions.replace(RHS, (e -> e isa Expr && e.args[1] == :R) => false)
 end
-~~~
+```
 
 When this function terminates, the only remaining variables in the expression will be those which correspond to the immutable input registers, and the program appears as a pure Boolean function over the inputs.
 
@@ -269,7 +269,7 @@ Fortunately, expression rewriting and simplification tools have existed for deca
 Before we even reach the decompilation stage, however, there's an inexpensive simplification that we can perform on the linear program itself. To do this, we use an algorithm which I believe goes back to Wolfgang Banzhaf. 
 
 
-~~~{.julia}
+```
 @inline function semantic_intron(inst::Inst)::Bool
     inst.op ∈ (&, |, mov) && (inst.src == inst.dst)
 end
@@ -293,7 +293,7 @@ end
 function strip_introns(code, out_regs)
     code[get_effective_indices(code, out_regs)]
 end
-~~~
+```
 
 This gives us what Banzhaf calls the "effective code" of the genotype, the code that actually influences the output. A great deal of execution time can be saved, in fact, by _only_ executing these instructions, while ignoring the rest of the chromosome, and this is just what Cockatrice does. The example of linear code displayed above, in fact, shows only the effective code of the champion 4-to-1 MUX champion.
 
@@ -307,13 +307,13 @@ On reflection, moreover, we can see that there's no need to attempt simplificati
 
 Since the only instruction in our instruction set that can result in a single instruction evaluating to a Boolean value is `xor`, we can easily faciliate that case by adding an _ad hoc_ condition to the beginning of our `to_expr(inst::Inst)` method:
 
-~~~{.julia}
+```
 if inst.op == xor && inst.src == inst.dst return false end
-~~~
+```
 
 The decompiler function now reads as follows:
 
-~~~{.julia}
+```
 function to_expr(code::Vector{Inst}; 
                  intron_free = true, 
                  incremental_simplify = true,
@@ -346,7 +346,7 @@ function to_expr(code::Vector{Inst};
         return RHS
     end
 end
-~~~
+```
 
 
 
@@ -371,7 +371,7 @@ And it only gets worse from there, for the naive method of expression decompilat
 
 By utilizing a 512 mibibyte cache with the `simplify()` function, we're able to obtain an impressive, 100x speedup when decompiling a virgin, unevolved population.
 
-~~~ {.julia}
+```
 julia> Expressions._use_cache(false); Expressions.flush_cache!()
 LRU{Expr, Union{Bool, Expr, Symbol}}(; maxsize = 1048576)
 
@@ -385,7 +385,7 @@ LRU{Expr, Union{Bool, Expr, Symbol}}(; maxsize = 1048576)
 julia> @btime s = LinearGenotype.decompile(rand(evoL.geo.deme), assign=false)
 8.610 μs (57 allocations: 2.39 KiB)
 :(D[1])
-~~~
+```
 
 Now, naive (unsimplified) expression complexity tends to increase as the population evolves, as more or less coherent logical structure begins to crystalize in the soup of once merely random instructions. This makes the simplification algorithm increasingly costly to run. Indeed, before we implemented incremental simplification in the decompilation algorithm, simplifying genome at a late stage in the evolution would often take upwards of 30 minutes, if it didn't exhaust the memory of our workstation entirely.
 
@@ -399,7 +399,7 @@ Since the possibilities for simplifying an expression do not depend on the parti
 
 Our caching algorithm captures this intuition by applying a canonical variable renaming on expressions and their simplifications before entering them into the cache, and by applying the same renaming scheme on an expression before consulting the cache for known simplifications.
 
-~~~{.julia}
+```
 function check_cache(e)
     try
         α, mapping = rename_variables(e)
@@ -416,11 +416,11 @@ function cache(e, result)
     result_α, _ = rename_variables(result; mapping)
     CACHE[e_α] = result_α
 end
-~~~
+```
 
 The renaming scheme itself is simple: we perform a pre-order traversal on the expression (any fixed traversal scheme will do), and whenever we encounter a new variable, we choose a new name for it from a fixed list of variable names that we know do not occur in the expression. 
 
-~~~{.julia}
+```
 function alpha_mapping(e; letter=:α)
     vars = variables_used(e)
     α = [:($(letter)[$(i)]) for i in 1:length(vars)]
@@ -435,11 +435,11 @@ end
 function restore_variables(e::Expr, mapping)
     subs(e, Dict((v,a) for (a,v) in mapping))
 end
-~~~
+```
 
 For example, this gives us:
 
-~~~{.julia}
+```
 e = :((~(D[2] ⊻ D[3]) | (D[4] & D[1] ⊻ (D[1] | D[2]))) ⊻ D[4])
 D[2] --> α[1]
 D[3] --> α[2]
@@ -447,7 +447,7 @@ D[4] --> α[3]
 D[1] --> α[4]
 α = :((~(α[1] ⊻ α[2]) | (α[3] & α[4] ⊻ (α[4] | α[1]))) ⊻ α[3])
 
-~~~
+```
 
 Any expression that is $\alpha$-equivalent to $e$ will be mapped to the exact same expression by our `rename_variables()` function. 
 
@@ -540,12 +540,12 @@ One of the most serious hazards that an evolutionary process can encounter is a 
 
 One way to offset such a premature convergence and loss of genetic information is to adjust the reward for a test case according to the frequency with which that test case has been successfully solved. This can easily be done by maintaining a data structure called an _interaction matrix_, a 2-dimensional array whose rows represent test cases and whose columns represent individuals in the population. `I[i,j]` is set to `1` if individual `j` solves test case `i`, and `0` otherwise. Each test case can then be assigned a "difficulty" score simply by taking the mean of its corresponding row, negated. Each individual then receives an award equal to the mean of the difficulty scores for the problems it's solved. 
 
-~~~{.julia}
+```
 difficulty_scores = [(~).(row .⊻ answer_vector) |> mean for row in eachrow(IM)]
 correct_results   = (~).(answer_vector .⊻ result_vector) # 
 adjusted_rewards  = correct_results .* difficulty_scores
 aggregate_reward  = mean(adjusted_rewards)
-~~~
+```
 
 Interaction matrices are used to calculate the relative selective pressures of each test case -- each set of inputs for a Boolean function, or the input row of its truth table. Each case is assigned a difficulty score, equal to 1 minus the frequency with which its solution appears in the existing population (i.e., (~).(row .⊻ answer_vector) |> mean, in Julia). An individual is assigned a score equal to the mean difficulty of the cases they solved. 
 
