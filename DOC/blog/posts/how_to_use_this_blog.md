@@ -57,3 +57,8 @@ Use these posts to discuss what it is you're working on, in detail. Some of the 
 
 I've set up a subdomain at `refusr.eschatronics.ca` to host this site for now, with a fairly standard htpasswd style authentication mechanism. If you're reading this, you already know that. The reason for gating this blog behind a password is just to relieve the pressure that comes with public visibility. I want us to be able to post here without worrying too much about sprucing things up for an outside audience. If there's any demand for a public facing blog as well, we can certainly spin one of those up, too.
 
+## Comments
+
+While P'log doesn't boast native support for comments, Github does! At the bottom of each post, you'll see a commit hash. If you click it, it should take you to the corresponding commit in the [REFUSR Github repo](https://github.com/REFUSR/REFUSR). You should all have access to that by now. 
+
+![Commit screenshot](../img/commit-screenshot.png)
