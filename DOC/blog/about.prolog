@@ -12,6 +12,7 @@ title('REFUSR Internal Blog').
 admin('Lucca Fraser').
 email('lucca.fraser@special-circumstanc.es').
 domain('refusr.eschatronics.ca').
+timezone(4).
 port(8008).
 bind(localhost).
 abstract('An internal blog for the REFUSR working group.').
