@@ -1,1 +1,1 @@
-../../GP/refusr/notebooks/boolean.jl
+../../GP/Refusr.jl/notebooks/boolean.jl
