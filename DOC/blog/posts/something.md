@@ -3,7 +3,7 @@ title: Mind Flayers
 author: Janet Jackson
 abstract: "They are extremely dangerous. Extreme caution should be taken at all times when dealing with Mind Flayers, or as they are known amongs themselves, the Ilithid."
 date: 1988-02-23
-tags: [mindflayers, danger, watchout]
+tags: [draft, mindflayers, danger, watchout]
 ---
 
 # Look at this fucking mind flayer
