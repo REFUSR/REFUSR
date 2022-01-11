@@ -25,3 +25,5 @@ Manifest.toml
 dev/*
 tmp/
 .#*
+
+*.swp
