@@ -3,6 +3,7 @@ title: "An analysis of the security and code quality of OpenPLC"
 author: "Stephen Okay"
 date: 2021-12-28
 tags: [code, openplc, python, plc, refusr]
+abstract: "An evaluation of the quality of the OpenPLC codebase, including a potential security issue."
 ---
 
 Introduction
