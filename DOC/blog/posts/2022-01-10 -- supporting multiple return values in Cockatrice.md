@@ -1,5 +1,5 @@
 ---
-title: 2022-01-11 -- supporting multiple return values in Cockatrice
+title: Supporting Multiple Return Values in Cockatrice
 author: me
 date: 2022-01-10
 tags:
