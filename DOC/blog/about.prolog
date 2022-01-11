@@ -9,7 +9,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 title('REFUSR Internal Blog').
-admin('Lucca Fraser').
+admin('Olivia Lucca Fraser').
 email('lucca.fraser@special-circumstanc.es').
 domain('refusr.eschatronics.ca').
 timezone(4).
