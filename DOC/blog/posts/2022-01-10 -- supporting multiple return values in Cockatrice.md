@@ -8,7 +8,7 @@ tags:
 - genetic_programming
 - reverse_engineering
 - boolean_functions
-abstract: "Our GP engine, Cockatrice, currently only supports functions of type B^n --> B^1. Many real-world cases to which we might apply our methods, however, are of type B^n --> B^n, including an interesting case study submitted to us by William D. Jones. "
+abstract: "Our GP engine, Cockatrice, currently only supports functions of type $\mathbb{B}^n \rightarrow \mathbb{B}^n$. Many real-world cases to which we might apply our methods, however, are of type $\mathbb{B}^n \rightarrow \mathbb{B}^m$, including an interesting case study submitted to us by William D. Jones. "
 ---
 
 William D. Jones sent us a I/O table, in CSV format, for a chip he's been reverse engineering, [the ATD Model M117 memory expansion ISA card](https://github.com/cr1901/ATD_M117). 
