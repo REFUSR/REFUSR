@@ -3,7 +3,6 @@ title: Supporting Multiple Return Values in Cockatrice
 author: me
 date: 2022-01-10
 tags:
-- draft
 - cockatrice
 - genetic_programming
 - reverse_engineering
