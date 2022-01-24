@@ -5,3 +5,5 @@ date: 2022-01-21
 abstract: "How to integrate genetic search driven symbolic regression, property testing, and the hardware interface."
 tags: [planning, draft]
 ---
+
+![Integration diagram](../img/refusr-integration-general.png)
