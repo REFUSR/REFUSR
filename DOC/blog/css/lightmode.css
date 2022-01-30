@@ -238,6 +238,12 @@ pre {
     counter-reset: line;
     font-weight: bold;
     font-family: Mono;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    white-space: -moz-pre-wrap;
+    white-space: -pre-wrap;
+    white-space: -o-pre-wrap;
+    word-wrap: break-word;
 }
 
 code {
@@ -278,6 +284,12 @@ code {
         color: #00ff85;
         counter-reset: line;
         font-weight: bold;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        white-space: -moz-pre-wrap;
+        white-space: -pre-wrap;
+        white-space: -o-pre-wrap;
+        word-wrap: break-word;
     }
     code {
       font-family: Mono;
