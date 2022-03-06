@@ -86,6 +86,9 @@ function prep_config(path)
     config = @set config.experiment =
         (@sprintf "%s.%02d-%02d-%02d" config.experiment hour(n) minute(n) second(n))
     config = @set config.logging.dir = Cockatrice.Logging.make_log_dir(config.experiment)
+    if config.genotype.output_reg isa Number
+        config = @set config.genotype.output_reg = [config.genotype.output_reg]
+    end
     println(config)
     config
 end

@@ -50,12 +50,24 @@ end
 function bfunc_by_rnd_prog(dim, len=512, ops="& | ~ xor")
 	  len = len isa Integer ? len : rand(len)
 	  registers = max(1, dim ÷ 2)
-	  ops = Symbol.(split(ops))
-	  prog = LinearGenotype.random_program(len; ops)
+		config = (
+        genotype = (
+            registers_n = dim,
+            data_n = dim,
+            max_steps = len,
+            output_reg = 1,
+            ops = ops
+        ),
+    )
+	  prog = LinearGenotype.random_program(
+        len;
+        ops = config.genotype.ops,
+        num_regs = config.genotype.registers_n,
+        num_data = config.genotype.data_n
+    )
 	  effective_indices = LinearGenotype.get_effective_indices(prog, [1])
 	  prog = prog[effective_indices]
 	  function x(bv)
-		    config = (genotype=(registers_n=dim-1, max_steps=len, output_reg=1),) 
 		    out, _ = LinearGenotype.execute(prog, bv; config=config, make_trace=false)
 		    return out
 	  end |> FunctionWrapper{Bool, Tuple{BitVector}}

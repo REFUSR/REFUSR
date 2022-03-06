@@ -2,6 +2,7 @@ using Test
 using ProgressMeter
 using Dates
 include("../src/base.jl")
+include("machine.jl")
 
 const Exp = Expressions
 
@@ -70,10 +71,10 @@ function test_decompiler()
     ## and perhaps not even on average.
     #@test cache_stats_no_incremental.took > cache_stats.took
     @test cache_stats.took >= cache_stats_α.took
-    @test cache_stats.hits > cache_stats_no_incremental.hits
+    @test cache_stats.hits >= cache_stats_no_incremental.hits
     @test cache_stats_α.hits >= cache_stats.hits
     @test cache_stats.queries == cache_stats_α.queries
-    @test cache_stats_no_incremental.queries < cache_stats.queries
+    @test cache_stats_no_incremental.queries <= cache_stats.queries
 
     @info "Some stats:" cache_stats_no_incremental cache_stats cache_stats_α
 
@@ -91,7 +92,7 @@ and requires $(time_improvement)% less time"""
 
     @info "stats" cache_stats cache_stats_α
 
-    @test α_rate > no_α_rate
+    @test α_rate >= no_α_rate
 
 end
 
@@ -149,6 +150,7 @@ function expression_tests()
 end
 
 
-expression_tests()
+machine_tests()
+#expression_tests()
 
 

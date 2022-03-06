@@ -44,7 +44,7 @@ pack(row) = sum([row[i] << (i - 1) for i = 1:length(row)])
 graydecode_row(row) = pack(row) |> graydecode
 
 
-function _set_data(data::String; samplesize = :ALL)
+function _set_data(data::String; outputs_n = 1, samplesize = :ALL)
     global DATA, INPUT, ORACLE, SEQNO, TARGET_ENERGY, ANSWERS
     data = Bool.(CSV.read(data, DataFrame))
     data = sort(eachrow(data), by = r -> graydecode_row(r[1:end-1])) |> DataFrame
@@ -61,14 +61,8 @@ function _set_data(data::String; samplesize = :ALL)
         ORACLE[row] = Bool(DATA[i,end])
         SEQNO[row] = i
     end
-    TARGET_ENERGY = Sensitivity.dirichlet_energy(x -> ORACLE[x], size(INPUT, 2))
-    ANSWERS = DATA.OUT
-end
-
-function _set_data(data::DataFrame)
-    global DATA
-    DATA = data
-    INPUT = Array{Bool}(DATA[:, 1:end-1]) |> BitArray
+    #TARGET_ENERGY = Sensitivity.dirichlet_energy(x -> ORACLE[x], size(INPUT, 2))
+    ANSWERS = DATA[!, end-(outputs_n-1):end] |> Array |> transpose |> BitArray #DATA.OUT
 end
 
 
@@ -140,17 +134,20 @@ intermediate_hamming(answers, trace) =
 # will happen when the score is multiplied by 1.
 # FIXME try rand() instead of ones(), so that it alters it in an "expected" or "average"
 # way, instead.
+
+random_results() = BitArray(rand(Bool, size(ANSWERS)...))
+
 passes(e) =
-    isnothing(e.phenotype) ? BitArray(rand(Bool, nrow(DATA))) :
-    (~).(e.phenotype.results .⊻ ANSWERS)
+    isnothing(e.phenotype) ? random_results() : (~).(e.phenotype.results .⊻ ANSWERS)
 
 ## TODO maintain this as a field of the Geo object, and update it in a piecemeal
 ## way, as needed. No need to reevaluate every row, every step.
 function build_interaction_matrix(geo)
+    dims = length(size(ANSWERS)) + 1
     if !isnothing(geo.interaction_matrix)
         geo.interaction_matrix
     else
-        geo.interaction_matrix = hcat(passes.(reshape(geo.deme, prod(size(geo.deme))))...)
+        geo.interaction_matrix = cat(passes.(reshape(geo.deme, prod(size(geo.deme))))...; dims)
     end
 end
 
@@ -170,7 +167,6 @@ end
 
 
 ## See Krawiec, chapter 6
-
 function trace_consistency(trace, answers)
     A = map(r -> BitEntropy.conditional_entropy(answers, r), eachslice(trace, dims = 2))
     B = map(r -> BitEntropy.conditional_entropy(r, answers), eachslice(trace, dims = 2))
@@ -190,6 +186,7 @@ function trace_information(trace; answers = ANSWERS)
     x = view(trace, OUTREG, :, :)
     map(x -> mutualinfo(answers, x), eachcol(x))
 end
+
 
 function active_trace_information(;
     code,
@@ -213,6 +210,7 @@ function update_interaction_matrix!(geo, index, out_vec)
     geo.interaction_matrix[:, flat_index] .= (!).(out_vec .⊻ ANSWERS)
 end
 
+
 function get_difficulty(interaction_matrix, row_index)
     interaction_matrix[row_index, :] |> mean
 end
@@ -223,7 +221,7 @@ function fit(geo, i)
     g = geo.deme[i]
     config = geo.config
     if DATA === nothing
-        _set_data(config.selection.data)
+        _set_data(config.selection.data, outputs_n=config.selection.outputs_n)
     end
 
     if isnothing(g.effective_code)

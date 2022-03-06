@@ -473,7 +473,7 @@ end
 
 
 @inline I(ar, i) = ar[mod1(abs(i), length(ar))]
-@inline IV(ar, i) = ar[mod1(abs(i), length(ar)), :]
+@inline IV(ar, i) = view(ar, mod1(abs(i), length(ar)), :)
 
 function evaluate_inst!(; regs, data, inst)
     s_regs = inst.src < 0 ? data : regs
@@ -497,19 +497,19 @@ function evaluate_inst_vec!(; R, D, inst)
     s_regs = inst.src < 0 ? D : R
     d_regs = R
     if inst.arity == 2
-        args = [IV(d_regs, inst.dst), IV(s_regs, inst.src)]
+        d_regs[inst.dst, :] .= inst.op.(IV(d_regs, inst.dst),
+                                        IV(s_regs, inst.src))
     elseif inst.arity == 1
-        args = [IV(s_regs, inst.src)]
+        d_regs[inst.dst, :] .= inst.op.(IV(s_regs, inst.src))
     else
-        args = []
+        d_regs[inst.dst, :] .= inst.op()
     end
-    d_regs[inst.dst, :] .= inst.op.(args...)
 
 end
 
 
 # TODO: use axis arrays
-function execute(code, data; config, make_trace = true)::Tuple{RegType,BitArray}
+function execute(code, data; config, make_trace = true)::Tuple{Vector{RegType},BitArray}
     num_regs = config.genotype.registers_n
     max_steps = config.genotype.max_steps
     outreg = config.genotype.output_reg
@@ -549,7 +549,7 @@ function execute_vec(code, INPUT; config, make_trace = true)
         if pc > max_steps
             break
         end
-        evaluate_inst_vec!(R = R, D = D, inst = inst)
+        evaluate_inst_vec!(;R, D, inst)
         if make_trace
             trace[pc = pc] = R
         end
@@ -559,16 +559,13 @@ function execute_vec(code, INPUT; config, make_trace = true)
 end
 
 
-function evaluate_vectoral(code; INPUT, config::NamedTuple, make_trace = true)
-    execute_vec(code, INPUT, config = config, make_trace = make_trace)
-end
 
 
 function compile_chromosome(code; config)
-    eff_ind = get_effective_indices(code, [1])
+    eff_ind = get_effective_indices(code, config.genotype.output_reg)
     eff = code[eff_ind]
-    (data -> execute(eff, data, config = config)[1]) |>
-    FunctionWrapper{Bool,Tuple{Union{BitVector,Vector{Bool}}}}
+    (data -> (execute(eff, data, config = config) |> first)) |>
+        FunctionWrapper{Bool,Tuple{Union{BitVector,Vector{Bool}}}}
 end
 
 
@@ -586,12 +583,13 @@ end
 function evaluate(g::Creature; INPUT, config::NamedTuple, make_trace = true)
     if isnothing(g.effective_code)
         #g.effective_code = strip_introns(g.chromosome, [config.genotype.output_reg])
-        g.effective_indices = get_effective_indices(g.chromosome, [1])
+        g.effective_indices = get_effective_indices(g.chromosome,
+                                                    config.genotype.output_reg)
         g.effective_code = g.chromosome[g.effective_indices]
     end
-    evaluate_vectoral(
+    execute_vec(
         g.effective_code,
-        INPUT = INPUT,
+        INPUT,
         config = config,
         make_trace = make_trace,
     )
