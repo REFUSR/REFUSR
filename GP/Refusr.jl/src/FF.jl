@@ -1,5 +1,6 @@
 module FF
 
+using AxisArrays
 using FunctionWrappers: FunctionWrapper
 using Statistics, CSV, DataFrames, InformationMeasures
 using StatsBase: sample
@@ -18,6 +19,9 @@ const evaluate = LinearGenotype.evaluate
 ###
 
 DATA = nothing
+## FIXME the ORACLE function doesn't work for multiple outputs, and, more seriously
+## neither does the boolean dirichlet energy function, but the latter *could* be adapted
+## to handle functions f: B --> Z (after mapping n-bit Boolean outputs to integers)
 ORACLE = nothing
 SEQNO = nothing
 INPUT = nothing
@@ -44,7 +48,14 @@ pack(row) = sum([row[i] << (i - 1) for i = 1:length(row)])
 graydecode_row(row) = pack(row) |> graydecode
 
 
-function _set_data(data::String; outputs_n = 1, samplesize = :ALL)
+function data_io_count(data)
+    cols = ncol(data)
+    outs = count(x -> startswith(x, "OUT"), names(data))
+    (cols - outs, outs)
+end
+
+
+function _set_data(data::String; samplesize = :ALL)
     global DATA, INPUT, ORACLE, SEQNO, TARGET_ENERGY, ANSWERS
     data = Bool.(CSV.read(data, DataFrame))
     data = sort(eachrow(data), by = r -> graydecode_row(r[1:end-1])) |> DataFrame
@@ -54,7 +65,13 @@ function _set_data(data::String; outputs_n = 1, samplesize = :ALL)
         rows = sample(1:size(data, 1), samplesize, replace = false)
         DATA = data[rows, :]
     end
-    INPUT = Array{Bool}(DATA[:, 1:end-1]) |> BitArray
+
+    cols = ncol(data)
+    outs = count(x -> startswith(x, "OUT"), names(data))
+    ins = cols - outs
+
+    INPUT = Array{Bool}(DATA[:, 1:ins]) |> BitArray
+    ANSWERS = DATA[!, ins+1:end] |> Array |> transpose |> BitArray #DATA.OUT
     ORACLE = Dict{BitVector, Bool}()
     SEQNO = Dict{BitVector, Integer}()
     for (i, row) in eachrow(INPUT) |> enumerate
@@ -62,7 +79,6 @@ function _set_data(data::String; outputs_n = 1, samplesize = :ALL)
         SEQNO[row] = i
     end
     #TARGET_ENERGY = Sensitivity.dirichlet_energy(x -> ORACLE[x], size(INPUT, 2))
-    ANSWERS = DATA[!, end-(outputs_n-1):end] |> Array |> transpose |> BitArray #DATA.OUT
 end
 
 
@@ -71,12 +87,11 @@ hamming(a, b) = (!).(a .⊻ b)
 mutualinfo(a, b) = get_mutual_information(a, b) / get_entropy(a)
 
 
-get_difficulty_scores(IM) = 1.0 .- map(mean, eachrow(IM))
+get_difficulty_scores(IM) = map(x -> 1.0 - mean(x), eachslice(IM, dims=2))
 
 function get_hamming(answers, result; IM = nothing, sharing = (!isnothing(IM)))
-    correct = (!).(answers .⊻ result)
+    correct = map(mean, eachcol((!).(answers .⊻ result))) # let's reward partial success
     if sharing
-        correct = (!).(answers .⊻ result)
         adjusted = correct .* get_difficulty_scores(IM)
         mean(adjusted)
     else
@@ -147,7 +162,8 @@ function build_interaction_matrix(geo)
     if !isnothing(geo.interaction_matrix)
         geo.interaction_matrix
     else
-        geo.interaction_matrix = cat(passes.(reshape(geo.deme, prod(size(geo.deme))))...; dims)
+        im = cat(passes.(reshape(geo.deme, prod(size(geo.deme))))...; dims)
+        geo.interaction_matrix = AxisArray(im, :correct, :problem, :creature)
     end
 end
 
@@ -195,7 +211,8 @@ function active_trace_information(;
     measure = mutualinfo,
 )
     slices = (view(trace, r, :, n) for (n, r) in enumerate(i.dst for i in code))
-    [measure(answers, s) for s in slices]
+    [measure(answers[1,:], s) for s in slices] # KLUDGE
+    # Not really sure how best to adapt this particular function to multiple outputs
 end
 
 
@@ -207,7 +224,7 @@ function update_interaction_matrix!(geo, index, out_vec)
         geo.interaction_matrix = build_interaction_matrix(geo)
     end
     flat_index = Geo.hilbert_index(geo, index)
-    geo.interaction_matrix[:, flat_index] .= (!).(out_vec .⊻ ANSWERS)
+    geo.interaction_matrix[creature=flat_index] = (!).(out_vec .⊻ ANSWERS)
 end
 
 
@@ -255,7 +272,8 @@ function fit(geo, i)
                 code = g.effective_code,
                 measure = hamming,
             ),
-            dirichlet_energy = dirichlet_energy_of_results(res, config),
+            dirichlet_energy = 0, ## KLUDGE
+            # FIXME #dirichlet_energy = dirichlet_energy_of_results(res, config),
         )
     end
 

@@ -33,7 +33,7 @@ include("LinearGenotype.jl")
 include("FF.jl")
 include("TreeGenotype.jl")
 include("step.jl")
-include("Z3Bridge.jl")
+#include("Z3Bridge.jl")
 include("Analysis.jl")
 
 
@@ -52,6 +52,7 @@ DEFAULT_CONFIG_FIELDS = [
     ["preserve_population"] => false,
     ["experiment"] => Names.rand_name(2),
     ["selection", "t_size"] => 6,
+    ["selection", "output_n"] => 1,
     ["selection", "lexical"] => true,
     ["selection", "fitness_function"] => FF.fit,
     ["selection", "fitness_weights"] => Dict([
@@ -63,7 +64,17 @@ DEFAULT_CONFIG_FIELDS = [
     ["logging", "dir"] => "$(ENV["HOME"])/logs/refusr/",
     ["genotype", "weight_crossover_points"] => true,
     ["genotype", "ops"] => "| & ~ mov",
+    ["genotype", "data_n"] => 1,
+    ["genotype", "output_reg"] => [1],
 ]
+
+
+
+function data_io_count(data)
+    cols = ncol(data)
+    outs = count(x -> startswith(x, "OUT"), names(data))
+    (cols - outs, outs)
+end
 
 function prep_config(path)
     proj_dir = abspath("$(@__DIR__)/../")
@@ -74,13 +85,11 @@ function prep_config(path)
         config = @set config.selection.data = "$(proj_dir)/$(config.selection.data)"
     end
     data = CSV.read(config.selection.data, DataFrame)
-    data_n = ncol(data) - 1
-    if data_n != config.genotype.data_n
-        @warn "data_n mismatch, setting to confirm to actual data" config.genotype.data_n ncol(
-            data,
-        ) - 1
-        config = @set config.genotype.data_n = data_n
-    end
+    
+    data_n, output_n = data_io_count(data)
+    config = @set config.genotype.data_n = data_n
+    config = @set config.selection.output_n = output_n
+    config = @set config.genotype.output_reg = Vector(1:output_n)
     config = @set config.genotype.ops = Symbol.(split(config.genotype.ops))
     n = now()
     config = @set config.experiment =

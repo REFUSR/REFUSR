@@ -1,39 +1,38 @@
-experiment_duration: 50000
+experiment_duration: 5000000
 step_duration: 1
 preserve_population: true
-experiment: "2MUX-with-sharing-weighted"
+experiment: "ADT"
 
 selection:
-  data: "./samples/2-MUX_overs-cohos-orbed_ALL.csv"
+  data: "./samples/ADT_2048.csv"
   d_fitness: 4
   t_size: 6
   fitness_sharing: true
   trace: true
-  lexical: true
+  lexical: false
   fitness_weights:
-    dirichlet: 10
-    ingenuity: 1000
-    information: 100
-    parsimony: 5
+    dirichlet: 0
+    ingenuity: 300
+    information: 200
+    parsimony: 50
+
 
 genotype:
   max_depth: 8
   min_len: 4
-  max_len: 200
-  data_n: 6
-  registers_n: 5
-  output_reg: [1]
-  max_steps: 512
+  max_len: 800
+  registers_n: 8
+  max_steps: 800
   mutation_rate: 0.1
   weight_crossover_points: true
-  ops: "| & ~ mov"
+  ops: "xor | & ~"
 
 population:
-  size: [10, 10]
+  size: [15, 15]
   toroidal: true
   locality: 16
   n_elites: 10
-  migration_rate: 0.2
+  migration_rate: 1.0
   migration_type: "elite"
 
 logging:
