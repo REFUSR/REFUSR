@@ -232,13 +232,14 @@ function get_difficulty(interaction_matrix, row_index)
     interaction_matrix[row_index, :] |> mean
 end
 
-
+## FIXME: phenotypes are disappearing! why?!
+## This will take some debugging.
 function fit(geo, i)
     global DATA
     g = geo.deme[i]
     config = geo.config
     if DATA === nothing
-        _set_data(config.selection.data, outputs_n=config.selection.outputs_n)
+        _set_data(config.selection.data)
     end
 
     if isnothing(g.effective_code)
@@ -254,28 +255,23 @@ function fit(geo, i)
 
     answers = ANSWERS
 
-    g.phenotype = begin #if isnothing(g.phenotype)
-        res, tr = evaluate(g, config = config, INPUT = INPUT, make_trace = true)
-
-        hamming(a, b) = (~).(a .⊻ b) |> mean
-
-        (
-            results = res,
-            trace = tr,
-            trace_info = active_trace_information(
+    res, tr = evaluate(g, config = config, INPUT = INPUT, make_trace = true)
+    hamming(a, b) = (~).(a .⊻ b) |> mean
+    g.phenotype = (
+        results = res,
+        trace = tr,
+        trace_info = active_trace_information(
                 trace = tr,
                 code = g.effective_code,
                 measure = mutualinfo,
             ),
-            trace_hamming = active_trace_information(
+        trace_hamming = active_trace_information(
                 trace = tr,
                 code = g.effective_code,
                 measure = hamming,
             ),
-            dirichlet_energy = 0, ## KLUDGE
-            # FIXME #dirichlet_energy = dirichlet_energy_of_results(res, config),
-        )
-    end
+        dirichlet_energy = 0, ## KLUDGE
+    )
 
     # since we don't have limitless confidence in any one
     # fitness metric, and would like to make room for tie-
@@ -310,8 +306,8 @@ function fit(geo, i)
 
     _fitness = (dirichlet = D, ingenuity = H, information = I, parsimony = P)
     weights = config.selection.fitness_weights
-    scalar_fitness = sum(_fitness[k] * weights[k] for k in keys(weights))
-    g.fitness = (scalar = scalar_fitness, _fitness...)
+    scalar = scalar_fitness(_fitness, weights)
+    g.fitness = (scalar = scalar, _fitness...)
     return g.fitness
 end
 

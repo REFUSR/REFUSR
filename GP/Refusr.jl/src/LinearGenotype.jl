@@ -415,7 +415,8 @@ end
 # TODO run some experiments and see if this actually improves over random
 # splice points
 function splice_point(g, weighted_by_trace_info = true)
-    if !weighted_by_trace_info
+    if !weighted_by_trace_info || isnothing(g.phenotype)
+        @show isnothing(g.phenotype)
         return rand(1:length(g.chromosome))
     end
     weights = Vector{Float64}(undef, length(g.chromosome))
