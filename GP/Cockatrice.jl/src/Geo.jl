@@ -154,6 +154,7 @@ function tournament(geo::Geography, fitness_function::Function)
     indices = choose_combatants(geo, geo.config.selection.t_size)
     for i in indices
         geo.deme[i].fitness = fitness_function(geo, i)
+        @assert geo.deme[i].phenotype !== nothing "Evaluated specimen at index $(i) did not acquire phenotype:\n$(geo.deme[i])"
     end
 
 

@@ -13,26 +13,26 @@ selection:
   fitness_weights:
     dirichlet: 0
     ingenuity: 300
-    information: 200
-    parsimony: 50
+    information: 20
+    parsimony: 10
 
 
 genotype:
   max_depth: 8
   min_len: 4
-  max_len: 800
-  registers_n: 8
-  max_steps: 800
+  max_len: 1200
+  registers_n: 16
+  max_steps: 1200
   mutation_rate: 0.1
   weight_crossover_points: true
-  ops: "xor | & ~"
+  ops: "mov xor | & ~"
 
 population:
-  size: [15, 15]
+  size: [16, 16]
   toroidal: true
   locality: 16
   n_elites: 10
-  migration_rate: 1.0
+  migration_rate: 0.5
   migration_type: "elite"
 
 logging:

@@ -13,11 +13,11 @@ using ..Names
 using ..StructuredTextTemplate
 using ..Cockatrice.Evo
 using ..Expressions
+using ..LinearVM
 
 
 const RegType = Bool
 const Exp = Expressions
-const mov = identity
 
 
 const Fitness = NamedTuple{
@@ -61,68 +61,8 @@ end
 # ]
 
 
-struct Inst
-    op::Function
-    arity::Int
-    # let's use the convention that negative indices refer to input
-    dst::Int
-    src::Int
-end
-
-## How many possible Insts are there, for N inputs?
-## Where there are N inputs, there are 2N possible src values and N possible dst
-## arity is fixed with op, so there are 4 possible op values
-number_of_possible_insts(n_input, n_reg; ops) = n_input * (n_input + n_reg) * length(ops)
 
 
-function number_of_possible_programs(n_input, n_reg, max_len)
-    [number_of_possible_insts(n_input, n_reg)^BigFloat(i) for i = 1:max_len] |> sum
-end
-
-function number_of_possible_programs(config::NamedTuple)
-    number_of_possible_programs(
-        config.genotype.data_n,
-        config.genotype.registers_n,
-        config.genotype.max_len,
-    )
-end
-
-
-
-@inline function semantic_intron(inst::Inst)::Bool
-    inst.op ∈ (&, |, mov) && (inst.src == inst.dst)
-end
-
-
-function get_effective_indices(code, out_regs)
-    active_regs = copy(out_regs)
-    active_indices = []
-    for (i, inst) in reverse(enumerate(code) |> collect)
-        semantic_intron(inst) && continue
-        if inst.dst ∈ active_regs
-            push!(active_indices, i)
-            filter!(r -> r != inst.dst, active_regs)
-            inst.arity == 2 && push!(active_regs, inst.dst)
-            inst.arity >= 1 && push!(active_regs, inst.src)
-        end
-    end
-    reverse(active_indices)
-end
-
-
-function strip_introns(code, out_regs)
-    code[get_effective_indices(code, out_regs)]
-end
-
-
-Base.isequal(a::Inst, b::Inst) =
-    (a.op == b.op && a.arity == b.arity && a.dst == b.dst && a.src == b.src)
-
-
-function Inst(d::Dict)
-    op = d["op"] isa Number ? constant(d["op"]) : eval(Symbol(d["op"]))
-    Inst(op, d["arity"], d["dst"], d["src"])
-end
 
 #####
 ## Decode a binary encoded instruction -- not yet in use
@@ -173,51 +113,55 @@ end
 
 
 
-function to_expr(inst::Inst)
-    # ad hoc check for boolean value
-    if inst.op == xor && inst.src == inst.dst
-        return :($dst = false)
-    end
-    ## factor this out if other ops with this property are added
-    op = nameof(inst.op)
-    dst = :(R[$(inst.dst)])
-    src_t = inst.src < 0 ? :D : :R
-    src_i = abs(inst.src)
-    src = :($(src_t)[$(src_i)])
-    if inst.arity == 2
-        :($dst = $op($dst, $src))
-    elseif inst.arity == 1
-        :($dst = $op($src))
-    else # inst.arity == 0
-        :($dst = $(inst.op()))
-    end
-end
-
 
 function to_expr(
     code::Vector{Inst};
-    intron_free = true,
     incremental_simplify = true,
     alpha_cache = true,
     threshold = 5,
+    output_reg = [1],
+    )
+
+    exprs = [to_expr_by_output_reg(code;
+                                   intron_free=false,
+                                   incremental_simplify,
+                                   alpha_cache,
+                                   threshold,
+                                   reg=o) for o in output_reg]
+    # now fold them, and simplify
+    @show seq(a,b) = :($a ; $b)
+    e = reduce(seq, exprs)
+    filter!(a -> !(a isa LineNumberNode), e.args)
+
+    return e
+end
+
+
+function to_expr_by_output_reg(
+    code::Vector{Inst};
+    intron_free = false,
+    incremental_simplify = true,
+    alpha_cache = true,
+    threshold = 5,
+    reg = 1,
 )
     DEFAULT_EXPR = false
-    code = intron_free ? copy(code) : strip_introns(code, [1])
+    code = intron_free ? copy(code) : strip_introns(code, [reg])
     if isempty(code)
         return DEFAULT_EXPR
     end
-    expr = pop!(code) |> to_expr
+    expr = pop!(code) |> inst_to_expr
     # if the final instruction in the code is just R[1] := R[1] ⊻ R[1]
     # then the program codes for `x -> false`. nothing else matters here.
     LHS, RHS = expr.args
-    @assert LHS == :(R[1])
+    @show LHS == :(R[$reg])
     if RHS isa Bool
         return RHS
     end
     while !isempty(code)
-        e = pop!(code) |> to_expr
+        @show e = pop!(code) |> inst_to_expr
         lhs, rhs = e.args
-        RHS = Expressions.replace(RHS, lhs => rhs)
+        @show RHS = Expressions.replace(RHS, lhs => rhs)
 
         if incremental_simplify && count_subexpressions(RHS) > threshold
             # We only need to simplify again if rhs has common variables with RHS minus lhs
@@ -231,9 +175,30 @@ function to_expr(
     # can be replaced with `false`.
     RHS = Expressions.replace(RHS, (e -> e isa Expr && e.args[1] == :R) => false)
     if incremental_simplify
-        return Expressions.simplify(RHS; alpha_cache)
-    else
-        return RHS
+        RHS = Expressions.simplify(RHS; alpha_cache)
+    end
+    return :($LHS = $RHS)
+end
+
+
+function inst_to_expr(inst::Inst)
+
+    ## factor this out if other ops with this property are added
+    op = nameof(inst.op)
+    dst = :(R[$(inst.dst)])
+    src_t = inst.src < 0 ? :D : :R
+    src_i = abs(inst.src)
+    src = :($(src_t)[$(src_i)])
+    # ad hoc check for boolean value
+    if inst.op == xor && inst.src == inst.dst
+        return :($dst = false)
+    end
+    if inst.arity == 2
+        :($dst = $op($dst, $src))
+    elseif inst.arity == 1
+        :($dst = $op($src))
+    else # inst.arity == 0
+        :($dst = $(inst.op()))
     end
 end
 
@@ -274,11 +239,8 @@ function decompile(
         return g.symbolic
     end
     @debug "Decompiling $(g.name)'s chromosome..."
-    if isnothing(g.effective_code)
-        g.effective_code = strip_introns(g.chromosome, [1])
-    end
     symbolic = to_expr(
-        g.effective_code,
+        g.chromosome,
         intron_free = true,
         incremental_simplify = incremental_simplify,
         alpha_cache = alpha_cache,
@@ -292,10 +254,6 @@ function decompile(
     return symbolic
 end
 
-
-function random_program(n; ops, num_data = 1, num_regs = 1)
-    [rand_inst(ops = ops, num_data = num_data, num_regs = num_regs) for _ = 1:n]
-end
 
 
 
@@ -366,35 +324,6 @@ function deserialize_creature(s::String)
 end
 
 
-function Base.show(io::IO, inst::Inst)
-    op_str = inst.op == identity ? "mov" : (inst.op |> nameof |> String)
-    regtype(x) = x < 0 ? 'D' : 'R'
-    if inst.arity == 2
-        @printf(
-            io,
-            "%c[%02d] ← %c[%02d] %s %c[%02d]",
-            regtype(inst.dst),
-            inst.dst,
-            regtype(inst.dst),
-            inst.dst,
-            op_str,
-            regtype(inst.src),
-            abs(inst.src)
-        )
-    elseif inst.arity == 1
-        @printf(
-            io,
-            "%c[%02d] ← %s %c[%02d]",
-            regtype(inst.dst),
-            inst.dst,
-            op_str,
-            regtype(inst.src),
-            abs(inst.src)
-        )
-    else # inst.arity == 0
-        @printf(io, "%c[%02d] ← %s", regtype(inst.dst), inst.dst, inst.op())
-    end
-end
 
 function Creature(chromosome::Vector{Inst})
     Creature(
@@ -456,145 +385,8 @@ function mutate!(creature::Creature; config = nothing)
     return
 end
 
-constant(c) = c ? truth : falsity
-
-truth() = true
-falsity() = false
 
 
-
-function rand_inst(; ops, num_data = 1, num_regs = num_data)
-    op = rand(ops)
-    arity = lookup_arity(op)
-
-    dst = rand(1:num_regs)
-    src = rand(Bool) ? rand(1:num_regs) : -1 * rand(1:num_data)
-    Inst(eval(op), arity, dst, src)
-end
-
-
-@inline I(ar, i) = ar[mod1(abs(i), length(ar))]
-@inline IV(ar, i) = view(ar, mod1(abs(i), length(ar)), :)
-
-function evaluate_inst!(; regs, data, inst)
-    s_regs = inst.src < 0 ? data : regs
-    d_regs = regs
-    if inst.arity == 2
-        args = [I(d_regs, inst.dst), I(s_regs, inst.src)]
-    elseif inst.arity == 1
-        args = [I(s_regs, inst.src)]
-    else # inst.arity == 0
-        args = []
-    end
-    d_regs[inst.dst] = inst.op(args...)
-end
-
-
-## TODO: Optimize this. maybe even for CUDA.
-# The indexing is slowing things down, I think.
-# vectoralize it further.
-function evaluate_inst_vec!(; R, D, inst)
-    # Add a dimension to everything
-    s_regs = inst.src < 0 ? D : R
-    d_regs = R
-    if inst.arity == 2
-        d_regs[inst.dst, :] .= inst.op.(IV(d_regs, inst.dst),
-                                        IV(s_regs, inst.src))
-    elseif inst.arity == 1
-        d_regs[inst.dst, :] .= inst.op.(IV(s_regs, inst.src))
-    else
-        d_regs[inst.dst, :] .= inst.op()
-    end
-
-end
-
-
-# TODO: use axis arrays
-function execute(code, data; config, make_trace = true)::Tuple{Vector{RegType},BitArray}
-    num_regs = config.genotype.registers_n
-    max_steps = config.genotype.max_steps
-    outreg = config.genotype.output_reg
-    regs = zeros(RegType, num_regs)
-    trace_len = max(1, min(length(code), max_steps)) # Assuming no loops
-    trace = BitArray(undef, num_regs, trace_len)
-    steps = 0
-    for (pc, inst) in enumerate(code)
-        if pc > max_steps
-            break
-        end
-        evaluate_inst!(regs = regs, data = data, inst = inst)
-        if make_trace
-            trace[:, pc] .= regs
-        end
-        steps += 1
-    end
-    regs[outreg], trace
-end
-
-
-function execute_vec(code, INPUT; config, make_trace = true)
-    D = INPUT'
-    R = BitArray(undef, config.genotype.registers_n, size(D, 2))
-    R .= false
-    max_steps = config.genotype.max_steps
-    trace_len = max(1, min(length(code), max_steps))
-    trace = BitArray(undef, size(R)..., trace_len)
-    trace = AxisArray(
-        trace,
-        reg = 1:size(trace, 1),
-        case = 1:size(trace, 2),
-        pc = [(1:size(trace, 3)-1)..., :end],
-    )
-    steps = 0
-    for (pc, inst) in enumerate(code)
-        if pc > max_steps
-            break
-        end
-        evaluate_inst_vec!(;R, D, inst)
-        if make_trace
-            trace[pc = pc] = R
-        end
-        steps += 1
-    end
-    R[config.genotype.output_reg, :], trace
-end
-
-
-
-
-function compile_chromosome(code; config)
-    eff_ind = get_effective_indices(code, config.genotype.output_reg)
-    eff = code[eff_ind]
-    (data -> (execute(eff, data, config = config) |> first)) |>
-        FunctionWrapper{Bool,Tuple{Union{BitVector,Vector{Bool}}}}
-end
-
-
-unzip(a) = map(x -> getfield.(a, x), fieldnames(eltype(a)))
-
-function evaluate_sequential(code; INPUT, config::NamedTuple, make_trace = true)
-    res, tr =
-        [
-            execute(code, row, config = config, make_trace = make_trace) for
-            row in eachrow(INPUT)
-        ] |> unzip
-    (res, cat(tr..., dims = (3,)))
-end
-
-function evaluate(g::Creature; INPUT, config::NamedTuple, make_trace = true)
-    if isnothing(g.effective_code)
-        #g.effective_code = strip_introns(g.chromosome, [config.genotype.output_reg])
-        g.effective_indices = get_effective_indices(g.chromosome,
-                                                    config.genotype.output_reg)
-        g.effective_code = g.chromosome[g.effective_indices]
-    end
-    execute_vec(
-        g.effective_code,
-        INPUT,
-        config = config,
-        make_trace = make_trace,
-    )
-end
 
 # What if we define parsimony wrt the # of unnecessary instructions?
 
@@ -670,5 +462,21 @@ END_VAR
         return st
     end
 end
+
+function evaluate(g::Creature; INPUT, config::NamedTuple, make_trace = true)
+    if isnothing(g.effective_code)
+        #g.effective_code = strip_introns(g.chromosome, [config.genotype.output_reg])
+        g.effective_indices = get_effective_indices(g.chromosome,
+                                                    config.genotype.output_reg)
+        g.effective_code = g.chromosome[g.effective_indices]
+    end
+    execute_vec(
+        g.effective_code,
+        INPUT,
+        config = config,
+        make_trace = make_trace,
+    )
+end
+
 
 end # end module

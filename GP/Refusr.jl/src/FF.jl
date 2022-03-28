@@ -236,38 +236,42 @@ end
 ## This will take some debugging.
 function fit(geo, i)
     global DATA
-    g = geo.deme[i]
+    #g = geo[i]
     config = geo.config
     if DATA === nothing
         _set_data(config.selection.data)
     end
 
-    if isnothing(g.effective_code)
-        g.effective_indices = LinearGenotype.get_effective_indices(g.chromosome, [1])
-        g.effective_code = view(g.chromosome, g.effective_indices)
+    if isnothing(geo[i].effective_code)
+        geo[i].effective_indices = LinearGenotype.get_effective_indices(
+            geo[i].chromosome,
+            geo.config.genotype.output_reg
+        )
+        geo[i].effective_code = view(geo[i].chromosome, geo[i].effective_indices)
     end
 
-    if isempty(g.effective_code)
-        return NewFitness()
-    end
+    ## This is what was causing some parents to appear without phenotypes
+    #if isempty(g.effective_code)
+    #    return NewFitness()
+    #end
 
     interaction_matrix = build_interaction_matrix(geo)
 
     answers = ANSWERS
 
-    res, tr = evaluate(g, config = config, INPUT = INPUT, make_trace = true)
+    res, tr = evaluate(geo[i], config = config, INPUT = INPUT, make_trace = true)
     hamming(a, b) = (~).(a .⊻ b) |> mean
-    g.phenotype = (
+    geo[i].phenotype = (
         results = res,
         trace = tr,
         trace_info = active_trace_information(
                 trace = tr,
-                code = g.effective_code,
+                code = geo[i].effective_code,
                 measure = mutualinfo,
             ),
         trace_hamming = active_trace_information(
                 trace = tr,
-                code = g.effective_code,
+                code = geo[i].effective_code,
                 measure = hamming,
             ),
         dirichlet_energy = 0, ## KLUDGE
@@ -281,34 +285,34 @@ function fit(geo, i)
     H = if config.selection.fitness_weights.ingenuity > 0
         get_hamming(
             answers,
-            g.phenotype.results,
+            geo[i].phenotype.results,
             sharing = config.selection.fitness_sharing,
             IM = interaction_matrix,
         )
     else
         0
     end
-    update_interaction_matrix!(geo, i, g.phenotype.results)
+    update_interaction_matrix!(geo, i, geo[i].phenotype.results)
 
-    D = dirichlet_energy = g.phenotype.dirichlet_energy
+    D = dirichlet_energy = geo[i].phenotype.dirichlet_energy
 
-    I = if g.fitness.information |> isfinite
-        g.fitness.information
+    I = if geo[i].fitness.information |> isfinite
+        geo[i].fitness.information
     else
-        maximum(g.phenotype.trace_info)
+        isempty(geo[i].phenotype.trace_info) ? -Inf : maximum(geo[i].phenotype.trace_info)
     end
 
-    P = if g.fitness.parsimony |> isfinite
-        g.fitness.parsimony
+    P = if geo[i].fitness.parsimony |> isfinite
+        geo[i].fitness.parsimony
     else
-        parsimony(g)
+        parsimony(geo[i])
     end
 
     _fitness = (dirichlet = D, ingenuity = H, information = I, parsimony = P)
     weights = config.selection.fitness_weights
     scalar = scalar_fitness(_fitness, weights)
-    g.fitness = (scalar = scalar, _fitness...)
-    return g.fitness
+    geo[i].fitness = (scalar = scalar, _fitness...)
+    return geo[i].fitness
 end
 
 

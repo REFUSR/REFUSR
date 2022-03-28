@@ -36,10 +36,10 @@ function bfunc_by_rnd_vec(dim)
 	  end |> FunctionWrapper{Bool, Tuple{BitVector}}
 end
 
-function bfunc_by_prog(prog::Vector{LinearGenotype.Inst})
+function bfunc_by_prog(prog::Vector{LinearGenotype.Inst}; output_reg=1)
 	  function x(bv)
 		    config = (genotype = (registers_n = dim - 1, 
-				                      max_steps = len, output_reg = 1),) 
+				                      max_steps = len, output_reg = output_reg),) 
 		    out, _ = LinearGenotype.execute(prog, bv; 
 			                                  config=config, make_trace=false)
 		    return out

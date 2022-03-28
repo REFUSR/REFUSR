@@ -682,7 +682,9 @@ function generate_main_page(config)
     push!(content, statistics)
 
 
-    push!(content, interaction_matrix_viewer(1, id = "interaction-matrices"))
+    ## FIXME -- disabled until I figure out a slick way to visualize higher-dimensional
+    ## interaction matrices.
+    #push!(content, interaction_matrix_viewer(1, id = "interaction-matrices"))
 
     # A specimen report
     #report = if !isempty(L.specimens)
