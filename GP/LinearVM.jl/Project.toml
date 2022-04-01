@@ -1,0 +1,8 @@
+name = "LinearVM"
+uuid = "eaae8e64-3c0b-46a7-89a9-4a9cb8781e2f"
+authors = ["Lucca Fraser <lucca.fraser@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+AxisArrays = "39de3d68-74b9-583c-8d2d-e117c070f3a9"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"

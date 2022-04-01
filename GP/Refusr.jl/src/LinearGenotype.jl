@@ -34,16 +34,6 @@ end
 
 
 
-@inline function lookup_arity(op_sym)
-    table = Dict(:xor => 2, :| => 2, :& => 2, :nand => 2, :nor => 2, :~ => 1, :mov => 1, :identity => 1)
-    try
-        return table[op_sym]
-    catch e
-        @warn "$(op_sym) not in arity table. assuming 2"
-        return 2
-    end
-end
-
 # TODO set up configurable ops
 # debug new decompiler bug
 
@@ -260,10 +250,10 @@ end
 function Creature(config::NamedTuple)
     len = rand(config.genotype.min_len:config.genotype.max_len)
     chromosome = [
-        rand_inst(
+        random_inst(
             ops = config.genotype.ops,
             num_data = config.genotype.data_n,
-            num_regs = config.genotype.registers_n,
+            num_registers = config.genotype.registers_n,
         ) for _ = 1:len
     ]
     fitness = NewFitness()
@@ -377,10 +367,10 @@ end
 function mutate!(creature::Creature; config = nothing)
     inds = keys(creature.chromosome)
     i = rand(inds)
-    creature.chromosome[i] = rand_inst(
+    creature.chromosome[i] = random_inst(
         ops = config.genotype.ops,
         num_data = config.genotype.data_n,
-        num_regs = config.genotype.registers_n,
+        num_registers = config.genotype.registers_n,
     )
     return
 end
@@ -442,10 +432,10 @@ end
 
 function structured_text(prog; config = nothing, comment = "")
     prog = strip_introns(prog, [1])
-    num_regs = config.genotype.registers_n
+    num_registers = config.genotype.registers_n
     reg_decl = """
 VAR
-    R : ARRAY[1..$(num_regs)] OF BOOL;
+    R : ARRAY[1..$(num_registers)] OF BOOL;
 END_VAR
 
 """

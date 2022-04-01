@@ -21,7 +21,42 @@ struct Inst
     src::Int
 end
 
-@inline function lookup_arity(op_sym)
+function Inst(opstr, dst::Integer, src::Integer)
+    op = Symbol(opstr)
+    arity = lookup_arity(op)
+    if dst == 0 || src == 0
+        error("0 is an invalid register index")
+    end
+    if dst < 0
+        error("Destination register musn't be immutable")
+    end
+    Inst(eval(op), arity, Int(dst), Int(src))
+end
+
+## Decode instructions written like 
+## "xor 4 -2"
+## or the pretty way
+## "R[04] ← R[04] xor D[02]"
+
+function Inst(s::String)
+    if '←' ∈ s || '=' ∈ s
+        assignment_token = '←' ∈ s ? '←' : '='
+        dstx, right = split(s, assignment_token)
+        opstr, srcx = split(right)[end-1:end]
+        # We encode data registers with negative integers
+        dn = parse(Int, filter(isdigit, dstx)) * (dstx[1] == 'D' ? -1 : 1)
+        sn = parse(Int, filter(isdigit, srcx)) * (srcx[1] == 'D' ? -1 : 1)
+    else
+        opstr, dststr, srcstr = split(s)
+        dn = parse(Int, dststr)
+        sn = parse(Int, srcstr)
+    end
+    Inst(opstr, dn, sn)
+end
+
+
+
+@inline function lookup_arity(op_sym::Symbol)
     table = Dict(:xor => 2, :| => 2, :& => 2, :nand => 2, :nor => 2, :~ => 1, :mov => 1, :identity => 1)
     try
         return table[op_sym]
@@ -35,19 +70,19 @@ function decode_ops(opstr)
     Symbol.(split(opstr))
 end 
 
-function random_inst(; ops, num_data = 1, num_regs = num_data)
+function random_inst(; ops, num_data = 1, num_registers = num_data)
     op = rand(ops)
     arity = lookup_arity(op)
-    dst = rand(1:num_regs)
-    src = rand(Bool) ? rand(1:num_regs) : -1 * rand(1:num_data)
+    dst = rand(1:num_registers)
+    src = rand(Bool) ? rand(1:num_registers) : -1 * rand(1:num_data)
     Inst(eval(op), arity, dst, src)
 end
 
-function random_program(n; ops=nothing, opstr=nothing, num_data = 1, num_regs = 1)
+function random_program(n; ops=nothing, opstr=nothing, num_data = 1, num_registers = 1)
     if !isnothing(opstr)
         ops = decode_ops(opstr)
     end
-    [random_inst(ops = ops, num_data = num_data, num_regs = num_regs) for _ = 1:n]
+    [random_inst(;ops, num_data, num_registers) for _ = 1:n]
 end
 
 ## How many possible Insts are there, for N inputs?
@@ -91,7 +126,8 @@ end
 
 
 function strip_introns(code, out_regs)
-    code[get_effective_indices(code, out_regs)] # use a view?
+    #code[get_effective_indices(code, out_regs)] # use a view?
+    view(code, get_effective_indices(code, out_regs))
 end
 
 Base.isequal(a::Inst, b::Inst) =
@@ -207,11 +243,13 @@ function execute_vec(code, INPUT; config=nothing, out_registers=nothing, num_reg
     R .= false
     trace_len = max(1, min(length(code), max_steps))
     trace = BitArray(undef, size(R)..., trace_len)
+    pcaxis = Vector{Union{Int64,Symbol}}(1:size(trace,3))
+    pcaxis[end] = :end
     trace = AxisArray(
         trace,
         reg = 1:size(trace, 1),
         case = 1:size(trace, 2),
-        pc = [(1:size(trace, 3)-1)..., :end],
+        pc = pcaxis,
     )
     steps = 0
     for (pc, inst) in enumerate(code)
@@ -224,11 +262,11 @@ function execute_vec(code, INPUT; config=nothing, out_registers=nothing, num_reg
         end
         steps += 1
     end
-    R[config.genotype.output_reg, :], trace
+    R[out_registers, :], trace
 end
 
 
-function compile_vm_code(code; config)
+function compile_vm_code(code; config, out_registers)
     eff_ind = get_effective_indices(code, out_registers)
     eff = code[eff_ind]
     (data -> (execute_seq(eff, data, config = config) |> first)) |>
@@ -247,10 +285,15 @@ function evaluate_sequential(code; INPUT, config::NamedTuple, make_trace = true)
     (res, cat(tr..., dims = (3,)))
 end
 
+# TODO transpose the output so that cases are represented by rows not columns
 
-function execute(code, input; num_registers=size(input, 2), out_registers=[1])
+function execute(code::Vector{Inst}, input; num_registers=size(input, 2), out_registers=[1])
     effective_code = strip_introns(code, out_registers)
     execute_vec(code, input; num_registers, out_registers)
+end
+
+function execute(code::Vector{String}, input; num_registers=size(input, 2), out_registers=[1])
+    execute(Inst.(code), input; num_registers, out_registers)
 end
 
 end

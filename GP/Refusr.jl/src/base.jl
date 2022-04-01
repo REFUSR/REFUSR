@@ -21,6 +21,7 @@ using ProgressMeter
 using Setfield
 using Statistics
 using Printf
+using LinearVM
 
 include("Bits.jl")
 include("Ops.jl")
@@ -29,7 +30,6 @@ include("StructuredTextTemplate.jl")
 include("Expressions.jl")
 include("Sensitivity.jl")
 include("Names.jl")
-include("LinearVM.jl")
 include("LinearGenotype.jl")
 include("FF.jl")
 include("TreeGenotype.jl")

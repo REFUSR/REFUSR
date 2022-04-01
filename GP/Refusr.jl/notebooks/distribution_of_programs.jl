@@ -56,7 +56,7 @@ INSTS = Set()
 
 # ╔═╡ 168ce919-b720-436b-937d-f58781ec6555
 while length(INSTS) < num_insts
-	push!(INSTS, LinearGenotype.rand_inst(num_data=2, num_regs=2))
+	push!(INSTS, LinearGenotype.random_inst(num_data=2, num_regs=2))
 end
 
 # ╔═╡ 0a980ef5-34ec-4bad-868e-2600dfc0f423
@@ -171,7 +171,7 @@ INSTSx = begin
 	push!(OPSx, (⊻, 2))
 	num_insts_x = 2 * (2+2) * length(OPSx)
 	while length(INSTSx) < num_insts_x
-		push!(INSTSx, LinearGenotype.rand_inst(ops=OPSx, num_data=2, num_regs=2))
+		push!(INSTSx, LinearGenotype.random_inst(ops=OPSx, num_data=2, num_regs=2))
 	end
 	INSTSx
 end
@@ -217,7 +217,7 @@ INSTSn = begin
 	INSTSn = Set()
 	num_insts_n = 2 * (2 + N) * length(OPSn)
 	while length(INSTSn) < num_insts_n
-		push!(INSTSn, LinearGenotype.rand_inst(ops=OPSn, num_data=2, num_regs=N))
+		push!(INSTSn, LinearGenotype.random_inst(ops=OPSn, num_data=2, num_regs=N))
 	end
 	INSTSn
 end
