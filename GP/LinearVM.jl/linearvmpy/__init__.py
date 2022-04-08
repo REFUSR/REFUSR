@@ -74,3 +74,18 @@ def execute(code, data, out_registers=[1], num_registers=None):
 
 
 
+def make_unit_test_table(n, csv="testdata.csv"):
+    code_len = 32
+    num_registers = 4
+    num_data = 4
+    out_registers = [1,2]
+    with open(csv, "w") as fd:
+        fd.write("num_data, num_registers, output_registers, program, num_cases, input_data, output\n")
+        for i in range(n):
+            prog = random_program_strs(code_len, num_data, num_registers)
+            data = fake_data(num_data)
+            output, trace = execute(prog, data, out_registers, num_registers=num_registers)
+            prog_s = ';'.join(prog)
+            out_s = ''.join(str(int(x)) for x in Main.vec(output))
+            data_s = ''.join(str(int(x)) for x in Main.vec(data))
+            fd.write(f"{num_data},{num_registers},{out_registers},{prog_s},{2**num_data},{data_s},{out_s}\n")
