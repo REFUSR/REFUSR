@@ -1,0 +1,3 @@
+[submodule "plog"]
+	path = DOC/blog/plog
+	url = git@github.com:oblivia-simplex/plog

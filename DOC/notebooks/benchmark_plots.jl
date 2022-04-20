@@ -1,1 +1,1 @@
-../../GP/refusr/notebooks/benchmark_plots.jl
+../../GP/Refusr.jl/notebooks/benchmark_plots.jl

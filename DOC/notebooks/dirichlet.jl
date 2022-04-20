@@ -1,1 +1,1 @@
-../../GP/refusr/notebooks/dirichlet.jl
+../../GP/Refusr.jl/notebooks/dirichlet.jl

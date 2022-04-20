@@ -1,1 +1,1 @@
-../../GP/refusr/notebooks/approximate_dirichlet.jl
+../../GP/Refusr.jl/notebooks/approximate_dirichlet.jl
