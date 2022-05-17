@@ -2,11 +2,15 @@ module LinearVM
 
 using Printf
 using AxisArrays
+using FunctionWrappers: FunctionWrapper
 
 export execute_vec, Inst, mov, get_effective_indices, strip_introns, truth, falsity, compile_vm_code, random_program, random_inst
 
 
 const mov = identity
+const VMOUT_t = Union{Vector{Bool}, BitVector}
+const VMIN_t  = Tuple{Union{Vector{Bool}, BitVector}}
+
 
 constant(c) = c ? truth : falsity
 
@@ -57,7 +61,7 @@ end
 
 
 @inline function lookup_arity(op_sym::Symbol)
-    table = Dict(:xor => 2, :| => 2, :& => 2, :nand => 2, :nor => 2, :~ => 1, :mov => 1, :identity => 1)
+    table = Dict(:⊻ => 2, :xor => 2, :| => 2, :& => 2, :nand => 2, :nor => 2, :~ => 1, :mov => 1, :identity => 1)
     try
         return table[op_sym]
     catch e
@@ -174,7 +178,7 @@ end
 @inline I(ar, i) = ar[mod1(abs(i), length(ar))]
 @inline IV(ar, i) = view(ar, mod1(abs(i), length(ar)), :)
 
-function evaluate_inst!(; regs, data, inst)
+function evaluate_inst!(; regs, data, inst, debug)
     s_regs = inst.src < 0 ? data : regs
     d_regs = regs
     if inst.arity == 2
@@ -183,6 +187,9 @@ function evaluate_inst!(; regs, data, inst)
         args = [I(s_regs, inst.src)]
     else # inst.arity == 0
         args = []
+    end
+    if debug
+        @printf "%-30s %s %s\n" inst regs data
     end
     d_regs[inst.dst] = inst.op(args...)
 end
@@ -208,21 +215,24 @@ end
 
 
 # TODO: use axis arrays
-function execute_seq(code, data; config=nothing, num_registers=nothing, max_steps=Inf, out_registers=nothing, make_trace = true)::Tuple{Vector{RegType},BitArray}
+function execute_seq(code, data; config=nothing, num_registers=1, max_steps=Inf, out_registers=[1], make_trace = true, debug = false)::Tuple{Vector{Bool},BitArray}
     if !isnothing(config)
         num_registers = config.genotype.registers_n
         out_registers = config.genotype.output_reg
         max_steps = config.genotype.max_steps
     end
-    regs = zeros(RegType, num_registers)
-    trace_len = max(1, min(length(code), max_steps)) # Assuming no loops
+    regs = zeros(Bool, num_registers) |> BitVector
+    trace_len = Int(max(1, min(length(code), max_steps))) # Assuming no loops
     trace = BitArray(undef, num_registers, trace_len)
     steps = 0
+    if debug
+        @printf "%-30s %s %s\n" "INITIALIZING" regs data
+    end
     for (pc, inst) in enumerate(code)
         if pc > max_steps
             break
         end
-        evaluate_inst!(regs = regs, data = data, inst = inst)
+        evaluate_inst!(; regs, data, inst, debug)
         if make_trace
             trace[:, pc] .= regs
         end
@@ -266,11 +276,15 @@ function execute_vec(code, INPUT; config=nothing, out_registers=nothing, num_reg
 end
 
 
-function compile_vm_code(code; config, out_registers)
+function compile_vm_code(code; config=nothing, num_registers=nothing, out_registers=nothing, debug=false)
+    if !isnothing(config)
+        out_registers = config.genotype.out_registers
+    end
     eff_ind = get_effective_indices(code, out_registers)
     eff = code[eff_ind]
-    (data -> (execute_seq(eff, data, config = config) |> first)) |>
-        FunctionWrapper{Bool,Tuple{Union{BitVector,Vector{Bool}}}}
+    function (data)
+        execute_seq(eff, data; config, num_registers, out_registers, debug) |> first 
+    end |> FunctionWrapper{VMOUT_t, VMIN_t}
 end
 
 

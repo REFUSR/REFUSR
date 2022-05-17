@@ -16,6 +16,8 @@ using ..LinearGenotype
 export bfunc_by_rnd_prog, bfunc_by_rnd_expr, bfunc_by_rnd_vec
 
 
+const VMOUT_t = Union{Vector{Bool},BitVector}
+const VMIN_t  = Tuple{Union{Vector{Bool}, BitVector}}
 
 function bitv_to_int(v,s=0)
     b = 0
@@ -33,7 +35,7 @@ function bfunc_by_rnd_vec(dim)
 	  function x(bv)
 		    i = bitv_to_int(bv)
 		    vector[i+1]
-	  end |> FunctionWrapper{Bool, Tuple{BitVector}}
+	  end |> FunctionWrapper{VMOUT_t, VMIN_t}
 end
 
 function bfunc_by_prog(prog::Vector{LinearGenotype.Inst}; output_reg=1)
@@ -43,7 +45,7 @@ function bfunc_by_prog(prog::Vector{LinearGenotype.Inst}; output_reg=1)
 		    out, _ = LinearGenotype.execute(prog, bv; 
 			                                  config=config, make_trace=false)
 		    return out
-	  end |> FunctionWrapper{Bool, Tuple{BitVector}}
+	  end |> FunctionWrapper{VMOUT_t, VMIN_t}
 end
 
 
@@ -70,7 +72,7 @@ function bfunc_by_rnd_prog(dim, len=512, ops="& | ~ xor")
 	  function x(bv)
 		    out, _ = LinearGenotype.execute(prog, bv; config=config, make_trace=false)
 		    return out
-	  end |> FunctionWrapper{Bool, Tuple{BitVector}}
+	  end |> FunctionWrapper{VMOUT_t, VMIN_t}
 end
 
 
@@ -87,7 +89,7 @@ function bfunc_from_truth_table(df)
     end
     function x(bv)
         ORACLE[bv]
-    end |> FunctionWrapper{Bool, Tuple{BitVector}}
+    end |> FunctionWrapper{VMOUT_t, VMIN_t}
 end
 
 end #module
